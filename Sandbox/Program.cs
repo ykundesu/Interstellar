@@ -1,10 +1,13 @@
 ﻿using Concentus;
 using Interstellar.AudioInput;
-using Interstellar.AudioPlayer.Provider;
 using Interstellar.Messages;
 using Interstellar.Messages.Messages;
 using Interstellar.Messages.Variation;
+using Interstellar.NAudio.Provider;
+using Interstellar.Routing;
+using Interstellar.Routing.Router;
 using NAudio.CoreAudioApi;
+using NAudio.Dsp;
 using NAudio.Wave;
 using SIPSorcery.Net;
 using System.Text;
@@ -14,7 +17,7 @@ namespace Sandbox;
 
 internal class Program
 {
-    internal const int WaveInDeviceId = 3; //使用する録音デバイスのIDを指定してください。
+    internal const int WaveInDeviceId = 2; //使用する録音デバイスのIDを指定してください。
     internal const string WaveOutDeviceName = ""; //使用する再生デバイスの名前を指定してください。
 
     static void PrintWaveInDevices()
@@ -40,46 +43,31 @@ internal class Program
         PrintWaveInDevices();
         PrintWaveOutDevices();
 
+        SimpleRouter source = new();
+        source.Connect(new SimpleEndPoint());
+        AudioManager manager = new(source);
+        manager.Start(WaveOutDeviceName);
+        
         WebSocket ws = new("ws://localhost:8000/vc");
         RTCPeerConnection pc = null!;
         MessageProcessor processor = null;
         ws.OnOpen += (sender, e) =>
         {
-            float[] buffer = new float[48000];
-            Dictionary<int, (IOpusDecoder, BufferedSampleProvider, Action)> decoders = new(32);
+            Dictionary<int, AudioRoutingInstance> decoders = new(32);
+
+
+            //var decoder = BiQuadFilter.LowPassFilter(48000, 1600, 0.5f);
+
             void DecodeAndAddSample(int id, byte[] encodedAudio)
             {
                 try
                 {
-                    if (!decoders.ContainsKey(id))
+                    if (!decoders.TryGetValue(id, out var instance))
                     {
-                        var provider = new BufferedSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(48000, 1));
-                        var wave = provider.ToWaveProvider();
-                        var device = new MMDeviceEnumerator().EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).FirstOrDefault(device => device.FriendlyName == WaveOutDeviceName) ?? new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-                        Console.WriteLine("Using output device: " + device.FriendlyName);
-                        var waveOut = new WasapiOut(device, AudioClientShareMode.Shared, false, 200);
-                        waveOut.Init(wave);
-                        decoders[id] = (AudioHelpers.GetOpusDecoder(), provider, () =>
-                        {
-                            try
-                            {
-                                if (waveOut.PlaybackState != PlaybackState.Playing)
-                                {
-                                    waveOut.Play();
-                                    Console.WriteLine("Started playback on device: " + device.FriendlyName);
-                                }
-                            }
-                            catch (Exception excep)
-                            {
-                                Console.WriteLine(excep.ToString());
-                            }
-                        }
-                        );
+                        instance = manager.Generate(id);
+                        decoders[id] = instance;
                     }
-                    var tuple = decoders[id];
-                    int length = tuple.Item1.Decode(encodedAudio, buffer, buffer.Length);
-                    tuple.Item2.AddSamples(buffer, 0, length);
-                    tuple.Item3.Invoke();
+                    instance.AddSamples(encodedAudio, 0, encodedAudio.Length);
                 }catch(Exception excep)
                 {
                     Console.WriteLine(excep.ToString());
@@ -89,10 +77,7 @@ internal class Program
             pc = new(WebSocketHelpers.GetRTCConfiguration());
             pc.OnAudioFrameReceived += frame =>
             {
-                Console.WriteLine("Received audio frame.");
                 DecodeAndAddSample(frame.AudioFormat.FormatID, frame.EncodedAudio);
-                Console.WriteLine("Pushed audio frame.");
-
             };
             pc.OnRtpPacketReceived += (_, mediaType, packet) =>
             {
@@ -142,7 +127,7 @@ internal class MessageProcessor : IMessageProcessor
                 var myTrack = new MediaStreamTrack(AudioHelpers.GetOpusFormat(shareId.Id), MediaStreamStatusEnum.SendOnly);
                 connection.addTrack(myTrack);
                 var stream = connection.AudioStreamList.Find(a => a.GetSendingFormat().ID == shareId.Id);
-                var source = new MicrophoneAudioSource(shareId.Id, Program.WaveInDeviceId); 
+                var source = new MicrophoneAudioSource(Program.WaveInDeviceId); 
                 source.BindToConnection(stream);
                 break;
             case MessageTag.SdpOffer:
@@ -151,7 +136,7 @@ internal class MessageProcessor : IMessageProcessor
 
                 //トラックの更新
                 foreach (var v in streams.Values) connection.removeTrack(v);
-                for (int i = 0; i < 63; i++)
+                for (int i = 0; i < AudioHelpers.MaxTracks; i++)
                 {
                     if ((offer.Mask & (1L << i)) != 0)
                     {

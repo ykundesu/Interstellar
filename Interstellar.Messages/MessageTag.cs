@@ -14,4 +14,5 @@ public enum MessageTag
     SdpAnswer = 3,
     AddIceCand = 4,
     ShareId = 5,
+    ShareProfile = 6,
 }

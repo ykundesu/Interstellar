@@ -97,15 +97,7 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
             var stream = new MediaStreamTrack(format, MediaStreamStatusEnum.RecvOnly);
             connection.addTrack(stream);
 
-            this.Send(MessagePacker.PackMessages([new ShareIdMessage(client.ClientId), UpdateTracks(room.CurrentVoiceMask)]).ToArray());
-        }
-    }
-
-    public void SendUpdate(long mask)
-    {
-        if (IsJoined)
-        {
-            this.Send(MessagePacker.PackMessage(UpdateTracks(mask)).ToArray());
+            SendMessages(new ShareIdMessage(client.ClientId), UpdateTracks(room.CurrentVoiceMask));
         }
     }
 
@@ -128,7 +120,7 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
     private SdpOfferMessage UpdateTracks(long mask)
     {
         int myId = client!.ClientId;
-        for(int i = 0; i < 63; i++)
+        for(int i = 0; i < AudioHelpers.MaxTracks; i++)
         {
             if(i == myId) continue;
             bool shouldHave = (mask & (1L << i)) != 0;
@@ -139,13 +131,11 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
                 var stream = new MediaStreamTrack(format, MediaStreamStatusEnum.SendOnly);
                 streamTracks.Add(i, stream);
                 connection.addTrack(stream);
-                Console.WriteLine("Added track for client " + i);
             }
             else if(!shouldHave && have)
             {
                 connection.removeTrack(existed);
                 streamTracks.Remove(i);
-                Console.WriteLine("Removed track for client " + i);
             }
         }
 
@@ -159,12 +149,41 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
         return new SdpOfferMessage(offer.sdp, mask);
     }
 
+    /// <summary>
+    /// クライアントに現在のトラック情報を送信します。SDPオファーメッセージを送信します。
+    /// </summary>
+    /// <param name="mask"></param>
+    public void SendTracksMask(long mask)
+    {
+        if (IsJoined)
+        {
+            SendMessage(UpdateTracks(mask));
+        }
+    }
+
+    /// <summary>
+    /// クライアントに音声フレームを送信します。
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="durationRtpUnits"></param>
+    /// <param name="encodedAudio"></param>
     public void SendAudio(int id, uint durationRtpUnits, byte[] encodedAudio)
     {
         if (audioStreams.TryGetValue(id, out var stream))
         {
             stream.SendAudio(durationRtpUnits, encodedAudio);
-            Console.WriteLine("Sent audio to client " + this.ID + " from client " + id + " (" + encodedAudio.Length + " bytes)");
         }
     }
+
+    /// <summary>
+    /// クライアントにメッセージを送信します。
+    /// </summary>
+    /// <param name="message"></param>
+    public void SendMessage(IMessage message) => this.Send(MessagePacker.PackMessage(message).ToArray());
+    
+    /// <summary>
+    /// クライアントにメッセージを与えられた順序で送信します。
+    /// </summary>
+    /// <param name="messages"></param>
+    public void SendMessages(params IEnumerable<IMessage> messages) => this.Send(MessagePacker.PackMessages(messages).ToArray());
 }

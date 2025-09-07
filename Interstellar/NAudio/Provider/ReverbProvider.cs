@@ -1,7 +1,10 @@
 ﻿using NAudio.Wave;
 
-namespace Interstellar.AudioPlayer.Provider;
+namespace Interstellar.NAudio.Provider;
 
+/// <summary>
+/// リバーブ効果を追加するSampleProvider。
+/// </summary>
 internal class ReverbSampleProvider : ISampleProvider
 {
     private readonly ISampleProvider sourceProvider;

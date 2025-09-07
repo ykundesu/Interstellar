@@ -24,4 +24,6 @@ static internal class RoomManager
             return room;
         }
     }
+
+    static public void RemoveRoom(string key) => rooms.Remove(key);
 }

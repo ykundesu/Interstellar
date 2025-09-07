@@ -6,9 +6,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Interstellar.AudioPlayer.Provider;
+namespace Interstellar.NAudio.Provider;
 
-public class BufferedSampleProvider : ISampleProvider
+/// <summary>
+/// サンプルを書き込めるBufferedProvider。
+/// NAudioのBufferedWaveProviderをサンプル用に改変。
+/// </summary>
+internal class BufferedSampleProvider : ISampleProvider
 {
     private CircularFloatBuffer circularBuffer;
 
@@ -16,6 +20,9 @@ public class BufferedSampleProvider : ISampleProvider
 
     public bool ReadFully { get; set; }
     public int BufferLength { get; set; }
+
+    public int BufferCutSize { get; set; } = int.MaxValue;
+    public int BufferCutToSize { get; set; } = int.MaxValue;
 
     public TimeSpan BufferDuration
     {
@@ -44,10 +51,10 @@ public class BufferedSampleProvider : ISampleProvider
     }
     public TimeSpan BufferedDuration => TimeSpan.FromSeconds((double)BufferedBytes / (double)WaveFormat.AverageBytesPerSecond);
     public WaveFormat WaveFormat => waveFormat;
-    public BufferedSampleProvider(WaveFormat waveFormat)
+    public BufferedSampleProvider(WaveFormat waveFormat, int? bufferLength = null)
     {
         this.waveFormat = waveFormat;
-        BufferLength = waveFormat.AverageBytesPerSecond * 5;
+        BufferLength = bufferLength ?? waveFormat.AverageBytesPerSecond * 5;
         ReadFully = true;
     }
     public void AddSamples(float[] buffer, int offset, int count)
@@ -56,15 +63,21 @@ public class BufferedSampleProvider : ISampleProvider
         {
             circularBuffer = new CircularFloatBuffer(BufferLength);
         }
-
         if (circularBuffer.Write(buffer, offset, count) < count && !DiscardOnBufferOverflow)
         {
             throw new InvalidOperationException("Buffer full");
+        }
+
+        if(circularBuffer.Count > BufferCutSize && BufferCutSize > BufferCutToSize)
+        {
+            circularBuffer.Discard(circularBuffer.Count - BufferCutToSize);
         }
     }
 
     public int Read(float[] buffer, int offset, int count)
     {
+        int lastLength = BufferedBytes;
+
         int num = 0;
         if (circularBuffer != null)
         {
@@ -76,6 +89,9 @@ public class BufferedSampleProvider : ISampleProvider
             Array.Clear(buffer, offset + num, count - num);
             num = count;
         }
+
+        int currentLength = BufferedBytes;
+        Console.WriteLine($"Read Buffered Data. Current: {currentLength}, Last: {lastLength}, Read: {lastLength - currentLength}");
 
         return num;
     }

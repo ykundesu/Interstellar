@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace Interstellar.Messages.Variation;
 
+/// <summary>
+/// 自身のIDを通知するサーバーメッセージ。
+/// </summary>
 public class ShareIdMessage : IMessage
 {
     public int Id;

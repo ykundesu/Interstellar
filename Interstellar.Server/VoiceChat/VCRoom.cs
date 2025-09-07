@@ -51,6 +51,8 @@ internal class VCRoom
                 c.OnJoinOrLeaveAnyone(currentMask);
             }
         }
+
+        if(fastClients.Count == 0) RoomManager.RemoveRoom(myKey);
     }
 
     public long CurrentVoiceMask { get

@@ -4,8 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Interstellar.AudioPlayer;
+namespace Interstellar.NAudio;
 
+/// <summary>
+/// float型のリングバッファ。
+/// NAudioが提供しているCircularBufferをfloat配列向けに改変。
+/// </summary>
 internal class CircularFloatBuffer
 {
     private readonly float[] buffer;
@@ -56,6 +60,16 @@ internal class CircularFloatBuffer
 
             byteCount += num;
             return num;
+        }
+    }
+
+    public void Discard(int count)
+    {
+        lock (lockObject)
+        {
+            count = Math.Min(byteCount, count);
+            readPosition = (readPosition + count) % buffer.Length;
+            byteCount -= count;
         }
     }
 

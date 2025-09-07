@@ -15,4 +15,6 @@ static public class AudioHelpers
     static public AudioFormat GetOpusFormat(int id) => new AudioFormat(AudioCodecsEnum.OPUS, id, ClockRate);
     static public IOpusEncoder GetOpusEncoder() => OpusCodecFactory.CreateEncoder(48000, 1, Concentus.Enums.OpusApplication.OPUS_APPLICATION_VOIP);
     static public IOpusDecoder GetOpusDecoder() => OpusCodecFactory.CreateDecoder(48000, 1);
+
+    public const int MaxTracks = 63;
 }

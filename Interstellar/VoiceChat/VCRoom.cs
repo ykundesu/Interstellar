@@ -1,34 +1,32 @@
-﻿using Interstellar.API.VoiceChat;
-using Interstellar.API.VoiceChat.Strategy;
-using Interstellar.Network;
-using SIPSorcery.Media;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Interstellar.Network;
 
 namespace Interstellar.VoiceChat;
 
-internal class VCRoomImpl<Player> : IVCRoom<Player>
+public class VCRoom : IConnectionContext
 {
     private RoomConnection connection;
-    private IRoomStrategy<Player> roomStrategy;
-    public VCRoomImpl(string roomCode, string region, string url, IRoomStrategy<Player> roomStrategy)
+
+    internal VCRoom(string roomCode, string region, string url, byte localPlayerId, string localPlayerName)
     {
-        //this.connection = new RoomConnection(roomCode, region, url);
-        this.roomStrategy = roomStrategy;
+        this.connection = new RoomConnection(this, roomCode, region, url, localPlayerId, localPlayerName);
     }
 
-    IEnumerable<IVoiceStream> IVCRoom<Player>.AllVoiceStreams => throw new NotImplementedException();
+    /// <summary>
+    /// 自身のプロフィールを更新します。
+    /// ゲーム終了後、ロビーに戻ったときなどに呼び出してください。
+    /// </summary>
+    /// <param name="playerName">プレイヤー名</param>
+    /// <param name="playerId">プレイヤーID</param>
+    public void UpdateProfile(string playerName, byte playerId) => this.connection.UpdateProfile(playerName, playerId);
 
-    void IVCRoom<Player>.Close()
-    {
-        throw new NotImplementedException();
-    }
+    /// <summary>
+    /// 使用するマイクをデバイスIDで指定します。
+    /// このメソッドを呼び出すまで音声は送信されません。
+    /// </summary>
+    /// <param name="deviceId"></param>
+    public void SetMicrophone(int deviceId) => this.connection.SetMicrophone(deviceId);
 
-    bool IVCRoom<Player>.TryGetPlayer(Predicate<Player> predicate, out IVCClient<Player> player)
+    void IConnectionContext.OnAudioFrameReceived(int clientId, float[] bytes, int length)
     {
-        throw new NotImplementedException();
     }
 }
