@@ -16,8 +16,6 @@ public class AudioRoutingInstance
     private List<AudioBuffer> buffers = [];
     private AudioRoutingInstanceNode[] nodes;
     private BufferedSampleProvider sourceProvider;
-    private IOpusDecoder decoder = AudioHelpers.GetOpusDecoder();
-    static private float[] decodeBuffer = new float[2048];
     internal AudioRoutingInstanceNode GetProperty(int propertyId) => nodes[propertyId];
 
     
@@ -28,9 +26,8 @@ public class AudioRoutingInstance
         this.sourceProvider = sourceProvider;
     }
 
-    public void AddSamples(byte[] samples, int offset, int count)
+    public void AddSamples(float[] samples, int offset, int count)
     {
-        int sampleLength = decoder.Decode(samples.AsSpan(offset, count), decodeBuffer, decodeBuffer.Length);
-        sourceProvider.AddSamples(decodeBuffer, 0, sampleLength);
+        sourceProvider.AddSamples(samples, offset, count);
     }
 }

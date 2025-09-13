@@ -14,9 +14,15 @@ internal interface IConnectionContext
     /// 音声フレームを受け取ったときに呼び出されます。
     /// </summary>
     /// <param name="clientId">音声フレームの送り主。</param>
-    /// <param name="bytes">音声データを含む配列。このメソッドの呼び出し後、配列は再利用されます。別の用途に使わないでください。</param>
+    /// <param name="samples">音声データを含む配列。このメソッドの呼び出し後、配列は再利用されます。別の用途に使わないでください。</param>
     /// <param name="length">音声データの長さ。</param>
-    void OnAudioFrameReceived(int clientId, float[] bytes, int length);
+    void OnAudioFrameReceived(int clientId, float[] samples, int length);
+
+    /// <summary>
+    /// クライアントが切断したときに呼び出されます。
+    /// </summary>
+    /// <param name="clientId"></param>
+    void OnClientDisconnected(int clientId); 
 }
 
 /// <summary>
@@ -41,7 +47,7 @@ internal class RoomConnection : IMessageProcessor
         this.roomCode = roomCode;
         this.region = region;
 
-        this.socket = new WebSocket(url + "/vc");
+        this.socket = new WebSocket(url);
         this.socket.OnMessage += (sender, e) =>
         {
             if (e.IsBinary) MessagePacker.UnpackMessages(e.RawData, this);
@@ -76,7 +82,7 @@ internal class RoomConnection : IMessageProcessor
     private void SetUpRTCConnection()
     {
         //オーディオフレームを受け渡す関数
-        float[] buffer = new float[48000];
+        float[] buffer = new float[2048];
         Dictionary<int, IOpusDecoder> decoders = new(64);
         void DecodeAndAddSample(int id, byte[] encodedAudio)
         {

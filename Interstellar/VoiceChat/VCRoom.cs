@@ -1,14 +1,17 @@
 ﻿using Interstellar.Network;
+using Interstellar.Routing;
 
 namespace Interstellar.VoiceChat;
 
 public class VCRoom : IConnectionContext
 {
     private RoomConnection connection;
-
-    internal VCRoom(string roomCode, string region, string url, byte localPlayerId, string localPlayerName)
+    private AudioManager audioManager;
+    private Dictionary<int, AudioRoutingInstance> audioInstances = new();
+    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, byte localPlayerId, string localPlayerName)
     {
         this.connection = new RoomConnection(this, roomCode, region, url, localPlayerId, localPlayerName);
+        this.audioManager = new AudioManager(audioRouter);
     }
 
     /// <summary>
@@ -26,7 +29,36 @@ public class VCRoom : IConnectionContext
     /// <param name="deviceId"></param>
     public void SetMicrophone(int deviceId) => this.connection.SetMicrophone(deviceId);
 
-    void IConnectionContext.OnAudioFrameReceived(int clientId, float[] bytes, int length)
+    /// <summary>
+    /// 音声の再生を開始します。
+    /// </summary>
+    /// <param name="deviceName"></param>
+    public void SetSpeaker(string deviceName) => this.audioManager.Start(deviceName);
+
+    private AudioRoutingInstance GetOrCreateAudioInstance(int clientId)
     {
+        if (!audioInstances.TryGetValue(clientId, out var instance))
+        {
+            instance = audioManager.Generate(clientId);
+            audioInstances[clientId] = instance;
+        }
+        return instance;
+    }
+
+    private bool TryGetAudioInstance(int clientId, out AudioRoutingInstance? instance) => audioInstances.TryGetValue(clientId, out instance);
+    
+    void IConnectionContext.OnAudioFrameReceived(int clientId, float[] samples, int length)
+    {
+        var instance = GetOrCreateAudioInstance(clientId);
+        instance.AddSamples(samples, 0, length);
+    }
+
+    void IConnectionContext.OnClientDisconnected(int clientId)
+    {
+        if(TryGetAudioInstance(clientId, out var instance))
+        {
+            //instance.
+            audioInstances.Remove(clientId);
+        }
     }
 }

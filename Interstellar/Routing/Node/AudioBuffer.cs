@@ -15,11 +15,14 @@ internal class AudioBuffer : ISampleProvider
     float[]? buffer;
     float[]? temp;
     int length = 0;
+    int groupId = -1;
+    public int GroupId => groupId;
     ISampleProvider source;
 
-    public AudioBuffer(ISampleProvider source)
+    public AudioBuffer(ISampleProvider source, int groupId)
     {
         this.source = source;
+        this.groupId = groupId;
     }
 
     public void Clear()

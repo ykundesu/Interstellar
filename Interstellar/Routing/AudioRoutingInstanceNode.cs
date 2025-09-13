@@ -14,7 +14,7 @@ internal class AudioRoutingInstanceNode
     private AudioMixer? mixer;
     private AudioBuffer? buffer;
     private ISampleProvider processor;
-    public AudioRoutingInstanceNode(List<AudioBuffer> bufferList, ISampleProvider source, Func<ISampleProvider, ISampleProvider> constructor, bool hasMultipleInput, bool hasMultipleOutput, int channels)
+    public AudioRoutingInstanceNode(List<AudioBuffer> bufferList, ISampleProvider source, Func<ISampleProvider, ISampleProvider> constructor, bool hasMultipleInput, bool hasMultipleOutput, int channels, int groupId)
     {
         if (hasMultipleInput)
         {
@@ -29,7 +29,7 @@ internal class AudioRoutingInstanceNode
         processor = constructor(mixer ?? source);
         if(hasMultipleOutput)
         {
-            buffer = new AudioBuffer(processor);
+            buffer = new AudioBuffer(processor, groupId);
             bufferList.Add(buffer);
         }
         else

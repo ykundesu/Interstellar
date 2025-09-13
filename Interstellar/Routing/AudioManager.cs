@@ -13,7 +13,7 @@ namespace Interstellar.Routing;
 
 public class AudioManager
 {
-    AbstractAudioRouter sourceRouter;
+    AbstractAudioRouter router;
     ISampleProvider? endpoint = null;
     int nodeLength;
     AudioRoutingInstanceNode[] globalNodes;
@@ -39,9 +39,9 @@ public class AudioManager
         }
     }
 
-    public AudioManager(AbstractAudioRouter audioSource)
+    internal AudioManager(AbstractAudioRouter audioRouter)
     {
-        this.sourceRouter = audioSource;
+        this.router = audioRouter;
         nodeLength = FixStructure();
         GenerateGlobalNodes();
         if(endpoint == null) throw new InvalidOperationException("No endpoint found in the audio routing structure.");
@@ -70,7 +70,7 @@ public class AudioManager
                 if (router.Channels == 1 && shouldBeGivenStereoChannel) SetChannelStereo(router);
             }
         }
-        SetId(sourceRouter, false, false);
+        SetId(router, false, false);
         return availableId;
     }
 
@@ -83,7 +83,7 @@ public class AudioManager
             {
                 if (globalNodes[router.Id] == null)
                 {
-                    globalNodes[router.Id] = new AudioRoutingInstanceNode(buffers, parent!, router.GenerateProcessor, router.HasMultipleInput, router.HasMultipleOutput, router.Channels);
+                    globalNodes[router.Id] = new AudioRoutingInstanceNode(buffers, parent!, router.GenerateProcessor, router.HasMultipleInput, router.HasMultipleOutput, router.Channels, -1);
                     if (router.IsEndpoint)
                     {
                         var processor = globalNodes[router.Id].Processor;
@@ -102,19 +102,18 @@ public class AudioManager
             }
                 foreach (var c in router.GetChildRouters()) GenerateInner(c, globalNodes[router.Id]?.Processor, router.IsGlobalRouter);
         }
-        GenerateInner(sourceRouter, null, false);
+        GenerateInner(router, null, false);
     }
 
     public AudioRoutingInstance Generate(int groupId)
     {
         AudioRoutingInstanceNode[] nodes = new AudioRoutingInstanceNode[globalNodes.Length];
-        List<AudioBuffer> buffers = [];
         Array.Copy(globalNodes, nodes, globalNodes.Length);
         void GenerateInner(AbstractAudioRouter router, ISampleProvider? parent)
         {
             if (nodes[router.Id] == null)
             {
-                nodes[router.Id] = new AudioRoutingInstanceNode(buffers, parent!, router.GenerateProcessor, router.HasMultipleInput, router.HasMultipleOutput, router.Channels);
+                nodes[router.Id] = new AudioRoutingInstanceNode(this.buffers, parent!, router.GenerateProcessor, router.HasMultipleInput, router.HasMultipleOutput, router.Channels, groupId);
             }
             else if(parent != null)
             {
@@ -123,11 +122,11 @@ public class AudioManager
             if (!router.IsGlobalRouter) foreach (var c in router.GetChildRouters()) GenerateInner(c, nodes[router.Id]?.Processor);
         }
         BufferedSampleProvider sourceProvider = new(WaveFormat.CreateIeeeFloatWaveFormat(AudioHelpers.ClockRate, 1), 4096) { DiscardOnBufferOverflow = true, BufferCutSize = 4096, BufferCutToSize = 2048 };
-        GenerateInner(sourceRouter, sourceProvider);
-        return new(buffers, nodes, sourceProvider);
+        GenerateInner(router, sourceProvider);
+        return new(this.buffers, nodes, sourceProvider);
     }
     
-    public void Start(string? outputDeviceName)
+    internal void Start(string? outputDeviceName)
     {
         if(endpoint == null) throw new InvalidOperationException("No endpoint found in the audio routing structure.");
         if (this.waveOut != null)
@@ -152,5 +151,15 @@ public class AudioManager
             this.waveOut.Dispose();
             this.waveOut = null;
         }
+    }
+
+    public void Remove(int clientId)
+    {
+        foreach(var node in this.globalNodes)
+        {
+            node?.RemoveInput(clientId);
+        }
+        buffers.RemoveAll(b => b.GroupId == clientId);
+
     }
 }
