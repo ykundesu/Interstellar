@@ -16,9 +16,16 @@ internal class StereoSampleProvider : ISampleProvider
     private float[] tempBuffer = null!;
     public WaveFormat WaveFormat { get; }
 
-    public float Pan { get; set; } = 0.0f; // -1.0 (左) から 1.0 (右)
+    private float pan = 0.0f;
+    private object panLock = new object();
+    public float Pan { get { 
+            lock (panLock) return pan;
+        } set { 
+            lock (panLock) pan = Math.Clamp(value, -1.0f, 1.0f);
+        } } // -1.0 (左) から 1.0 (右)
     private int lastLDelay = 0;
     private int lastRDelay = 0;
+    public float Volume { get; set; } = 1.0f;
     public StereoSampleProvider(ISampleProvider sourceProvider)
     {
         this.sourceProvider = sourceProvider;
@@ -29,10 +36,15 @@ internal class StereoSampleProvider : ISampleProvider
     {
         if (tempBuffer == null || tempBuffer.Length < count / 2) tempBuffer = new float[count / 2];
         int tempLength = sourceProvider.Read(tempBuffer, 0, count / 2);
-        
+
         int monoCount = count / 2;
-        int lDelay = (int)((Pan < 0 ? 0 : Pan) * 70);
-        int rDelay = (int)((Pan < 0 ? -Pan : 0) * 70);
+        float pan = this.Pan;
+        float lCoeff = pan < 0 ? 0 : pan;
+        float rCoeff = pan < 0 ? -pan : 0;
+        int lDelay = (int)(lCoeff * 50);
+        int rDelay = (int)(rCoeff * 50);
+        float lVol = (1.0f - lCoeff * 0.3f) * Volume;
+        float rVol = (1.0f - rCoeff * 0.3f) * Volume;
         int lCount = monoCount - lDelay + lastLDelay;
         int rCount = monoCount - rDelay + lastRDelay;
 
@@ -40,15 +52,15 @@ internal class StereoSampleProvider : ISampleProvider
         {
             int lIndex = i * lCount / monoCount;//lastBufferに含まれる遅延分を含めた添え字
             if (lIndex < lastLDelay)
-                buffer[offset + i * 2] = lastBuffer[lastBufferCount - lastLDelay + lIndex];
+                buffer[offset + i * 2] = lastBuffer[lastBufferCount - lastLDelay + lIndex] * lVol;
             else
-                buffer[offset + i * 2] = tempBuffer[lIndex - lastLDelay];
+                buffer[offset + i * 2] = tempBuffer[lIndex - lastLDelay] * lVol;
 
             int rIndex = i * rCount / monoCount;//lastBufferに含まれる遅延分を含めた添え字
-            if (lIndex < lastRDelay)
-                buffer[offset + i * 2 + 1] = lastBuffer[lastBufferCount - lastRDelay + rIndex];
+            if (rIndex < lastRDelay)
+                buffer[offset + i * 2 + 1] = lastBuffer[lastBufferCount - lastRDelay + rIndex] * rVol;
             else
-                buffer[offset + i * 2 + 1] = tempBuffer[rIndex - lastRDelay];
+                buffer[offset + i * 2 + 1] = tempBuffer[rIndex - lastRDelay] * rVol;
         }
 
         lastLDelay = lDelay;

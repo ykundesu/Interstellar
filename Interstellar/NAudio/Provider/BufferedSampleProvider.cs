@@ -91,7 +91,6 @@ internal class BufferedSampleProvider : ISampleProvider
         }
 
         int currentLength = BufferedBytes;
-        Console.WriteLine($"Read Buffered Data. Current: {currentLength}, Last: {lastLength}, Read: {lastLength - currentLength}");
 
         return num;
     }

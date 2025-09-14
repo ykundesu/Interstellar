@@ -45,8 +45,41 @@ internal class Program
         PrintWaveOutDevices();
 
         SimpleRouter source = new();
-        source.Connect(new SimpleEndPoint());
-        VCRoom room = new(source, "ABCDE", "testRegion", "ws://localhost:8000/vc", 0, "Dolly");
+        StereoRouter imager = new();
+        source.Connect(imager);
+        imager.Connect(new SimpleEndPoint());
+        VCRoom room = new(source, "ABCDE", "testRegion", "ws://localhost:8000/vc", (clientId, instance) =>
+        {
+            
+            async Task UpdatePanAsync()
+            {
+                var prop = imager.GetProperty(instance);
+                float pan = 1f;
+                while (true)
+                {
+                    while(pan > -1f)
+                    {
+                        await Task.Delay(10);
+                        await Task.Run(() =>
+                        {
+                            pan -= 0.005f;
+                            prop.Pan = pan;
+                        });
+                    }
+                    while (pan < 1f)
+                    {
+                        await Task.Delay(10);
+                        await Task.Run(() =>
+                        {
+                            pan += 0.005f;
+                            prop.Pan = pan;
+                        });
+                    }
+                }
+            }
+            _ = UpdatePanAsync();
+            
+        });
         room.SetMicrophone(WaveInDeviceId);
         room.SetSpeaker(WaveOutDeviceName);
 

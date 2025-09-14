@@ -17,6 +17,7 @@ public abstract class AbstractAudioRouter
     internal bool IsGlobalRouter { get; set; } = false;
     abstract protected internal bool IsEndpoint { get; }
     internal int Channels = 1;
+    virtual internal int OutputChannels => Channels;
     internal IEnumerable<AbstractAudioRouter> GetChildRouters() => children;
     private List<AbstractAudioRouter> children = [];
 
@@ -29,7 +30,7 @@ public abstract class AbstractAudioRouter
     abstract internal ISampleProvider GenerateProcessor(ISampleProvider source);
 }
 
-public abstract class AbstractAudioNodeProvider<AudioProperty> : AbstractAudioRouter where AudioProperty : class
+public abstract class AbstractAudioNodeProvider<AudioProperty> : AbstractAudioRouter where AudioProperty : class, ISampleProvider
 {
     public AudioProperty GetProperty(AudioRoutingInstance instance) => (instance.GetProperty(Id).Processor as AudioProperty)!;
 }

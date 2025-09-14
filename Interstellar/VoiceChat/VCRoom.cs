@@ -1,5 +1,6 @@
 ﻿using Interstellar.Network;
 using Interstellar.Routing;
+using static Interstellar.VoiceChat.VCRoom;
 
 namespace Interstellar.VoiceChat;
 
@@ -8,10 +9,14 @@ public class VCRoom : IConnectionContext
     private RoomConnection connection;
     private AudioManager audioManager;
     private Dictionary<int, AudioRoutingInstance> audioInstances = new();
-    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url)
+    private readonly OnConnectClient onConnectClient;
+
+    public delegate void OnConnectClient(int clientId, AudioRoutingInstance routing);
+    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, OnConnectClient onConnectClient)
     {
         this.connection = new RoomConnection(this, roomCode, region, url);
         this.audioManager = new AudioManager(audioRouter);
+        this.onConnectClient = onConnectClient;
     }
 
     /// <summary>
@@ -40,6 +45,7 @@ public class VCRoom : IConnectionContext
         if (!audioInstances.TryGetValue(clientId, out var instance))
         {
             instance = audioManager.Generate(clientId);
+            onConnectClient?.Invoke(clientId, instance);
             audioInstances[clientId] = instance;
         }
         return instance;

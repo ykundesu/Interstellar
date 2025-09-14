@@ -62,7 +62,7 @@ public class AudioManager
                 router.Id = availableId++;
                 if (router.IsGlobalRouter && !inGlobalRoute) router.HasMultipleInput = true;
                 if (shouldBeGivenStereoChannel || router.ShouldBeGivenStereoInput) router.Channels = 2;
-                foreach(var c in router.GetChildRouters()) SetId(c, shouldBeGivenStereoChannel, router.IsGlobalRouter || inGlobalRoute);
+                foreach(var c in router.GetChildRouters()) SetId(c, shouldBeGivenStereoChannel || router.OutputChannels == 2, router.IsGlobalRouter || inGlobalRoute);
             }
             else
             {
@@ -87,7 +87,6 @@ public class AudioManager
                     if (router.IsEndpoint)
                     {
                         var processor = globalNodes[router.Id].Processor;
-                        //if (processor.WaveFormat.Channels == 1) processor = new MonoToStereoSampleProvider(processor);
                         endpoint = new SampleProviderWrapper(processor, this);
                     }
                 }
@@ -100,7 +99,7 @@ public class AudioManager
             {
                 if(isInGlobalArea) throw new InvalidDataException("A non-global router cannot be a child of a global router.");
             }
-                foreach (var c in router.GetChildRouters()) GenerateInner(c, globalNodes[router.Id]?.Processor, router.IsGlobalRouter);
+                foreach (var c in  router.GetChildRouters()) GenerateInner(c, globalNodes[router.Id]?.Processor, router.IsGlobalRouter);
         }
         GenerateInner(router, null, false);
     }
