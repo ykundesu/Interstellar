@@ -8,9 +8,9 @@ public class VCRoom : IConnectionContext
     private RoomConnection connection;
     private AudioManager audioManager;
     private Dictionary<int, AudioRoutingInstance> audioInstances = new();
-    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, byte localPlayerId, string localPlayerName)
+    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url)
     {
-        this.connection = new RoomConnection(this, roomCode, region, url, localPlayerId, localPlayerName);
+        this.connection = new RoomConnection(this, roomCode, region, url);
         this.audioManager = new AudioManager(audioRouter);
     }
 

@@ -41,7 +41,7 @@ internal class RoomConnection : IMessageProcessor
     private AudioStream? localAudioStream;
 
     IConnectionContext context;
-    public RoomConnection(IConnectionContext context, string roomCode, string region, string url, byte playerId, string playerName)
+    public RoomConnection(IConnectionContext context, string roomCode, string region, string url)
     {
         this.context = context;
         this.roomCode = roomCode;
@@ -52,8 +52,6 @@ internal class RoomConnection : IMessageProcessor
         {
             if (e.IsBinary) MessagePacker.UnpackMessages(e.RawData, this);
         };
-        
-        this.profileMessage = new ProfileMessage(playerName, playerId);
         Connect();
     }
 
@@ -65,8 +63,17 @@ internal class RoomConnection : IMessageProcessor
     public void UpdateProfile(string playerName, byte playerId)
     {
         var message = new ProfileMessage(playerName, playerId);
-        if (profileMessage != null) profileMessage = message;
-        else this.socket.SendMessages(message);        
+        profileMessage = message;
+        TrySendProfile();
+    }
+
+    private void TrySendProfile()
+    {
+        if (profileMessage != null && socket.IsAlive)
+        {
+            this.socket.SendMessage(profileMessage);
+            profileMessage = null;
+        }
     }
 
     private void Connect()
@@ -101,8 +108,8 @@ internal class RoomConnection : IMessageProcessor
         }
 
 
-        this.socket.SendMessages(new JoinMessage(roomCode, region), profileMessage!);
-        profileMessage = null;
+        this.socket.SendMessages(new JoinMessage(roomCode, region));
+        TrySendProfile();
         this.connection = new RTCPeerConnection(WebSocketHelpers.GetRTCConfiguration());
         this.connection.OnAudioFrameReceived += frame =>
         {
