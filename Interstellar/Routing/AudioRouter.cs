@@ -14,7 +14,7 @@ public abstract class AbstractAudioRouter
     internal bool HasMultipleInput { get; set; } = false;
     internal bool HasMultipleOutput => children.Count() > 1;
     abstract protected internal bool ShouldBeGivenStereoInput { get; }
-    internal bool IsGlobalRouter { get; set; } = false;
+    public bool IsGlobalRouter { get; set; } = false;
     abstract protected internal bool IsEndpoint { get; }
     internal int Channels = 1;
     virtual internal int OutputChannels => Channels;
