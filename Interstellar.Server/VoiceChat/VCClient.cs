@@ -34,6 +34,11 @@ internal class VCClient
         this.service.SendTracksMask(currentMask);
     }
 
+    public void NoticeLeaveClient(byte clientId)
+    {
+        this.service.SendClientLeft(clientId);
+    }
+
     /// <summary>
     /// 部屋に自身の音声をブロードキャストします。
     /// </summary>

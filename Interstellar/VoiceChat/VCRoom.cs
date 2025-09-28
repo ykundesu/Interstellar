@@ -10,8 +10,10 @@ public class VCRoom : IConnectionContext
     private AudioManager audioManager;
     private Dictionary<int, AudioRoutingInstance> audioInstances = new();
     private readonly OnConnectClient onConnectClient;
+    private readonly OnUpdateProfile onUpdateProfile;
 
     public delegate void OnConnectClient(int clientId, AudioRoutingInstance routing);
+    public delegate void OnUpdateProfile(int clientId, byte playerId, string playerName);
     public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, OnConnectClient onConnectClient)
     {
         this.connection = new RoomConnection(this, roomCode, region, url);
@@ -66,5 +68,10 @@ public class VCRoom : IConnectionContext
             //instance.
             audioInstances.Remove(clientId);
         }
+    }
+
+    void IConnectionContext.OnClientProfileUpdated(int clientId, string playerName, byte playerId)
+    {
+        onUpdateProfile?.Invoke(clientId, playerId, playerName);
     }
 }

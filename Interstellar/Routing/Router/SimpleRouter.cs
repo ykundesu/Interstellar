@@ -16,4 +16,9 @@ public class SimpleRouter : AbstractAudioRouter
         return source;
     }
 
+    public SimpleRouter(bool isGlobalRouter = false)
+    {
+        IsGlobalRouter = isGlobalRouter;
+    }
+
 }

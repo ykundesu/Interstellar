@@ -23,6 +23,14 @@ internal interface IConnectionContext
     /// </summary>
     /// <param name="clientId"></param>
     void OnClientDisconnected(int clientId); 
+
+    /// <summary>
+    /// クライアントのプロフィールが更新されたときに呼び出されます。
+    /// </summary>
+    /// <param name="clientId"></param>
+    /// <param name="playerName"></param>
+    /// <param name="playerId"></param>
+    void OnClientProfileUpdated(int clientId, string playerName, byte playerId);
 }
 
 /// <summary>
@@ -148,6 +156,10 @@ internal class RoomConnection : IMessageProcessor
                 break;
             case MessageTag.AddIceCand:
                 OnReceiveIceCandMessage(IceCandMessage.DeserializeWithoutTag(bytes, out read));
+                break;
+            case MessageTag.ShareProfile:
+                var profile = ShareProfileMessage.DeserializeWithoutTag(bytes, out read);
+                context.OnClientProfileUpdated(profile.PlayerId, profile.PlayerName, profile.PlayerId);
                 break;
         }
         return read;

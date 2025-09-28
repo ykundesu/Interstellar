@@ -15,4 +15,5 @@ public enum MessageTag
     AddIceCand = 4,
     ShareId = 5,
     ShareProfile = 6,
+    NoticeDisconnect = 7,
 }

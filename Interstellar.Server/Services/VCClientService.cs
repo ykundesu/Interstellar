@@ -161,6 +161,14 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
         }
     }
 
+    public void SendClientLeft(int clientId)
+    {
+        if (IsJoined)
+        {
+            SendMessage(new NoticeDisconnectMessage(clientId));
+        }
+    }
+
     /// <summary>
     /// クライアントに音声フレームを送信します。
     /// </summary>

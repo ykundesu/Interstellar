@@ -49,6 +49,7 @@ internal class VCRoom
             foreach (var c in fastClients.Values)
             {
                 c.OnJoinOrLeaveAnyone(currentMask);
+                c.NoticeLeaveClient(client.ClientId);
             }
         }
 
