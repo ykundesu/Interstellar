@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.14.36310.24
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Interstellar", "Interstellar\Interstellar.csproj", "{3A455938-8CD5-4153-B202-F027AE98AAF8}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E78ABDD6-1298-402F-A810-BC15351830E5} = {E78ABDD6-1298-402F-A810-BC15351830E5}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Interstellar.Server", "Interstellar.Server\Interstellar.Server.csproj", "{9D269FDA-32CB-450A-99B0-E00E65DC4AD1}"
 EndProject

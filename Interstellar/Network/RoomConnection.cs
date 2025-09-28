@@ -161,6 +161,10 @@ internal class RoomConnection : IMessageProcessor
                 var profile = ShareProfileMessage.DeserializeWithoutTag(bytes, out read);
                 context.OnClientProfileUpdated(profile.PlayerId, profile.PlayerName, profile.PlayerId);
                 break;
+            case MessageTag.NoticeDisconnect:
+                var disconnect =NoticeDisconnectMessage.DeserializeWithoutTag(bytes, out read);
+                context.OnClientDisconnected(disconnect.ClientId);
+                break;
         }
         return read;
     }

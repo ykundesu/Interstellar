@@ -18,7 +18,7 @@ namespace Sandbox;
 
 internal class Program
 {
-    internal const int WaveInDeviceId = 2; //使用する録音デバイスのIDを指定してください。
+    internal const int WaveInDeviceId = 1; //使用する録音デバイスのIDを指定してください。
     internal const string WaveOutDeviceName = "Arctis Nova 3P Wireless"; //使用する再生デバイスの名前を指定してください。
 
     static void PrintWaveInDevices()
