@@ -23,7 +23,7 @@ public static class AudioDevices
     {
         foreach (var device in new MMDeviceEnumerator().EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
         {
-            yield return device.DeviceFriendlyName;
+            yield return device.FriendlyName;
         }
     }
 }
