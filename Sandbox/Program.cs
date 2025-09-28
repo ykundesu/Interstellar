@@ -18,7 +18,7 @@ namespace Sandbox;
 
 internal class Program
 {
-    internal const int WaveInDeviceId = 1; //使用する録音デバイスのIDを指定してください。
+    internal const string WaveInDeviceId = "2- AG06/AG03"; //使用する録音デバイスのIDを指定してください。
     internal const string WaveOutDeviceName = "Arctis Nova 3P Wireless"; //使用する再生デバイスの名前を指定してください。
 
     static void PrintWaveInDevices()
@@ -47,8 +47,8 @@ internal class Program
         SimpleRouter source = new();
         StereoRouter imager = new();
         source.Connect(imager);
-        imager.Connect(new SimpleEndPoint());
-        VCRoom room = new(source, "ABCDE", "testRegion", "ws://localhost:8000/vc", (clientId, instance) =>
+        imager.Connect(new SimpleEndpoint());
+        VCRoom room = new(source, "ABCDE", "testRegion", "ws://localhost:8000/vc", (clientId, instance, isLocal) =>
         {
             
             async Task UpdatePanAsync()

@@ -6,7 +6,7 @@ using SIPSorcery.Net;
 
 namespace Interstellar.AudioInput;
 
-public class MicrophoneAudioSource
+internal class MicrophoneAudioSource
 {
     WaveInEvent waveIn;
     IOpusEncoder encoder = AudioHelpers.GetOpusEncoder();
@@ -14,7 +14,7 @@ public class MicrophoneAudioSource
     float[] sampleBuffer = null;
     byte[] encodedBuffer = new byte[4096];
     ISenderContext context;
-    public MicrophoneAudioSource(int deviceNum, ISenderContext context)
+    internal MicrophoneAudioSource(int deviceNum, ISenderContext context)
     {
         this.context = context;
         waveIn = new WaveInEvent() { BufferMilliseconds = 20, NumberOfBuffers = 4 };

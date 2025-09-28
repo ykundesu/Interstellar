@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace Interstellar.Routing.Router;
 
-public class SimpleEndPoint : AbstractAudioRouter
+public class SimpleEndpoint : AbstractAudioRouter
 {
-    public SimpleEndPoint()
+    public SimpleEndpoint()
     {
         IsGlobalRouter = true;
     }
