@@ -30,7 +30,7 @@
 	<Target Name="CopyLibrary" BeforeTargets="AfterBuild">
 		<Copy SourceFiles="@(FilesToCopy)" DestinationFolder="$(ProjectDir)Libs" />
 		<Exec Command="del $(ProjectDir)Libs.zip %26 cd $(ProjectDir)Libs %26 %22$(ZipArchiver)\7z.exe%22 a ..\Libs.zip" />
-		<Copy SourceFiles="$(TargetDir)Interstellar.dll" DestinationFolder="$(AmongUsRelease)" />
+		<Copy SourceFiles="$(TargetDir)Interstellar.dll" DestinationFolder="$(AmongUsRelease)" Condition="'$(AmongUsRelease)' != ''"/>
 	</Target>	
 	
 
