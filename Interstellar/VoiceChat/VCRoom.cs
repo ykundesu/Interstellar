@@ -1,5 +1,6 @@
 ﻿using Interstellar.Network;
 using Interstellar.Routing;
+using NAudio.Wave;
 using static Interstellar.VoiceChat.VCRoom;
 
 namespace Interstellar.VoiceChat;
@@ -37,8 +38,23 @@ public class VCRoom : IConnectionContext
     /// 使用するマイクをデバイスIDで指定します。
     /// このメソッドを呼び出すまで音声は送信されません。
     /// </summary>
-    /// <param name="deviceId"></param>
-    public void SetMicrophone(int deviceId) => this.connection.SetMicrophone(deviceId);
+    public bool SetMicrophone(string deviceName)
+    {
+        var count = WaveInEvent.DeviceCount;
+        for (int i = 0; i < count; i++)
+        {
+            if(WaveInEvent.GetCapabilities(i).ProductName == deviceName)
+            {
+                SetMicrophone(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void SetMicrophone(int deviceId) => this.connection.SetMicrophone(deviceId);
+
+
 
     /// <summary>
     /// 音声の再生を開始します。

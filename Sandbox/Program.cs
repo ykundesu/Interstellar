@@ -79,7 +79,7 @@ internal class Program
             }
             _ = UpdatePanAsync();
             
-        });
+        }, (_,_,_) => { });
         room.SetMicrophone(WaveInDeviceId);
         room.SetSpeaker(WaveOutDeviceName);
 
