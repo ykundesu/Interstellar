@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Interstellar.Routing.Router;
 
-internal class FilterRouter : AbstractAudioRouter
+public class FilterRouter : AbstractAudioRouter
 {
     public class FilteredProvider : ISampleProvider
     {

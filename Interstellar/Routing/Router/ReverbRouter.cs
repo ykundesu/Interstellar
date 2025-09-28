@@ -12,7 +12,7 @@ namespace Interstellar.Routing.Router;
 /// ディレイ効果をもたらすオーディオルーター。
 /// </summary>
 
-internal class ReverbRouter : AbstractAudioNodeProvider<ReverbRouter.Property>
+public class ReverbRouter : AbstractAudioNodeProvider<ReverbRouter.Property>
 {
     public class Property : ISampleProvider
     {
