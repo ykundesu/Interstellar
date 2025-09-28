@@ -159,6 +159,5 @@ public class AudioManager
             node?.RemoveInput(clientId);
         }
         buffers.RemoveAll(b => b.GroupId == clientId);
-
     }
 }

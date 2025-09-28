@@ -8,7 +8,18 @@ using WebSocketSharp;
 
 namespace Interstellar.Network;
 
-internal interface IConnectionContext
+internal interface ISenderContext
+{
+    /// <summary>
+    /// オーディオデータを送信する際に呼び出されます。
+    /// </summary>
+    /// <param name="buffer"></param>
+    /// <param name="offset"></param>
+    /// <param name="count"></param>
+    void OnAudioSent(float[] buffer, int offset, int count);
+}
+
+internal interface IConnectionContext : ISenderContext
 {
     /// <summary>
     /// 音声フレームを受け取ったときに呼び出されます。
@@ -45,6 +56,8 @@ internal class RoomConnection : IMessageProcessor
     private MicrophoneAudioSource? microphone;
     private ProfileMessage? profileMessage = null;
     private int? myClientId = null;
+
+    public int MyClientId => myClientId ?? -1;
 
     private AudioStream? localAudioStream;
 
@@ -132,7 +145,7 @@ internal class RoomConnection : IMessageProcessor
     public void SetMicrophone(int deviceId)
     {
         if (this.microphone != null) this.microphone.Close();
-        this.microphone = new MicrophoneAudioSource(deviceId);
+        this.microphone = new MicrophoneAudioSource(deviceId, context);
         ReflectIdToMicrophone();
     }
 
@@ -213,5 +226,11 @@ internal class RoomConnection : IMessageProcessor
             sdpMLineIndex = (ushort)message.SdpMLineIndex,
             usernameFragment = message.UsernameFragment
         });
+    }
+
+    internal void Disconnect()
+    {
+        connection?.Close("Client left the game.");
+        socket.Close();
     }
 }

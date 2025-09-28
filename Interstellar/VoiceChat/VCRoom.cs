@@ -11,15 +11,19 @@ public class VCRoom : IConnectionContext
     private Dictionary<int, AudioRoutingInstance> audioInstances = new();
     private readonly OnConnectClient onConnectClient;
     private readonly OnUpdateProfile onUpdateProfile;
+    private bool loopBack = false;
 
-    public delegate void OnConnectClient(int clientId, AudioRoutingInstance routing);
+    public delegate void OnConnectClient(int clientId, AudioRoutingInstance routing, bool isLocalClient);
     public delegate void OnUpdateProfile(int clientId, byte playerId, string playerName);
-    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, OnConnectClient onConnectClient)
+    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, OnConnectClient onConnectClient, OnUpdateProfile onUpdateProfile)
     {
         this.connection = new RoomConnection(this, roomCode, region, url);
         this.audioManager = new AudioManager(audioRouter);
         this.onConnectClient = onConnectClient;
+        this.onUpdateProfile = onUpdateProfile;
     }
+
+    public void SetLoopBack(bool enable) => this.loopBack = enable;
 
     /// <summary>
     /// 自身のプロフィールを更新します。
@@ -42,12 +46,12 @@ public class VCRoom : IConnectionContext
     /// <param name="deviceName"></param>
     public void SetSpeaker(string deviceName) => this.audioManager.Start(deviceName);
 
-    private AudioRoutingInstance GetOrCreateAudioInstance(int clientId)
+    private AudioRoutingInstance GetOrCreateAudioInstance(int clientId, bool asLocalClient)
     {
         if (!audioInstances.TryGetValue(clientId, out var instance))
         {
             instance = audioManager.Generate(clientId);
-            onConnectClient?.Invoke(clientId, instance);
+            onConnectClient?.Invoke(clientId, instance, asLocalClient);
             audioInstances[clientId] = instance;
         }
         return instance;
@@ -57,7 +61,7 @@ public class VCRoom : IConnectionContext
     
     void IConnectionContext.OnAudioFrameReceived(int clientId, float[] samples, int length)
     {
-        var instance = GetOrCreateAudioInstance(clientId);
+        var instance = GetOrCreateAudioInstance(clientId, false);
         instance.AddSamples(samples, 0, length);
     }
 
@@ -66,6 +70,7 @@ public class VCRoom : IConnectionContext
         if(TryGetAudioInstance(clientId, out var instance))
         {
             //instance.
+            audioManager.Remove(clientId);
             audioInstances.Remove(clientId);
         }
     }
@@ -73,5 +78,20 @@ public class VCRoom : IConnectionContext
     void IConnectionContext.OnClientProfileUpdated(int clientId, string playerName, byte playerId)
     {
         onUpdateProfile?.Invoke(clientId, playerId, playerName);
+    }
+
+    void ISenderContext.OnAudioSent(float[] buffer, int offset, int count)
+    {
+        if (loopBack && connection.MyClientId != -1)
+        {
+            var instance = GetOrCreateAudioInstance(connection.MyClientId, true);
+            instance.AddSamples(buffer, offset, count);
+        }
+    }
+
+    public void Disconnect()
+    {
+        connection.Disconnect();
+        audioManager.Stop();
     }
 }
