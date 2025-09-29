@@ -80,6 +80,16 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
                 Console.WriteLine("Client " + this.ID + " sent ICE candidate.");
                 AddIceCandidate(IceCandMessage.DeserializeWithoutTag(bytes, out read));
                 break;
+            case MessageTag.Profile:
+                if (client == null)
+                {
+                    Console.WriteLine("Client " + this.ID + " sent profile without joining room.");
+                    break;
+                }
+                var profile = ProfileMessage.DeserializeWithoutTag(bytes, out read);
+                Console.WriteLine("Client " + this.ID + " sent profile (name: " + profile.PlayerName + "id: " + profile.PlayerId + ").");
+                client.UpdateProfile(profile.PlayerName, profile.PlayerId);
+                break;
         }
         return read;
     }
@@ -97,7 +107,7 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
             var stream = new MediaStreamTrack(format, MediaStreamStatusEnum.RecvOnly);
             connection.addTrack(stream);
 
-            SendMessages(new ShareIdMessage(client.ClientId), UpdateTracks(room.CurrentVoiceMask));
+            SendMessages([new ShareIdMessage(client.ClientId), UpdateTracks(room.CurrentVoiceMask), ..client.ShareExistingProfiles()]);
         }
     }
 

@@ -26,4 +26,6 @@ public static class AudioDevices
             yield return device.FriendlyName;
         }
     }
+
+    public static string DefaultSpeaker => new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Communications).FriendlyName;
 }

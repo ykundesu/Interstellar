@@ -30,7 +30,12 @@ public abstract class AbstractAudioRouter
     abstract internal ISampleProvider GenerateProcessor(ISampleProvider source);
 }
 
+public interface IHasAudioPropertyNode
+{
+    internal AudioRoutingInstanceNode GetProperty(int propertyId);
+}
+
 public abstract class AbstractAudioNodeProvider<AudioProperty> : AbstractAudioRouter where AudioProperty : class, ISampleProvider
 {
-    public AudioProperty GetProperty(AudioRoutingInstance instance) => (instance.GetProperty(Id).Processor as AudioProperty)!;
+    public AudioProperty GetProperty(IHasAudioPropertyNode nodeHolder) => (nodeHolder.GetProperty(Id).Processor as AudioProperty)!;
 }

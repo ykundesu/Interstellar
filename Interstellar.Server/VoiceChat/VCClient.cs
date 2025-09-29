@@ -1,4 +1,5 @@
-﻿using Interstellar.Server.Services;
+﻿using Interstellar.Messages.Variation;
+using Interstellar.Server.Services;
 using SIPSorcery.Net;
 using System;
 using System.Collections.Generic;
@@ -60,10 +61,15 @@ internal class VCClient
         this.service.SendAudio(id, durationRtpUnits, encodedAudio);
     }
 
+    public void SendProfile(byte id, string playerName, byte playerId)
+    {
+        this.service.SendMessage(new ShareProfileMessage(id, playerName, playerId));
+    }
+
     public void UpdateProfile(string playerName, byte playerId)
     {
         this.profile = new Profile(playerName, playerId);
-        
+        myRoom.BroadcastProfile(ClientId, playerName, playerId);
     }
 
     public bool TryGetProfile([MaybeNullWhen(false)]out string playerName, out byte playerId)
@@ -85,5 +91,16 @@ internal class VCClient
     public void Close()
     {
         myRoom.Leave(this);
+    }
+
+    internal IEnumerable<ShareProfileMessage> ShareExistingProfiles()
+    {
+        foreach (var c in myRoom.Clients)
+        {
+            if (c.ClientId != this.ClientId && c.TryGetProfile(out var name, out var pid))
+            {
+                yield return new ShareProfileMessage(c.ClientId, name, pid);
+            }
+        }
     }
 }

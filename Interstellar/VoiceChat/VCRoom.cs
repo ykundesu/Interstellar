@@ -5,7 +5,7 @@ using static Interstellar.VoiceChat.VCRoom;
 
 namespace Interstellar.VoiceChat;
 
-public class VCRoom : IConnectionContext
+public class VCRoom : IConnectionContext, IHasAudioPropertyNode
 {
     private RoomConnection connection;
     private AudioManager audioManager;
@@ -16,6 +16,16 @@ public class VCRoom : IConnectionContext
 
     public delegate void OnConnectClient(int clientId, AudioRoutingInstance routing, bool isLocalClient);
     public delegate void OnUpdateProfile(int clientId, byte playerId, string playerName);
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="audioRouter"></param>
+    /// <param name="roomCode"></param>
+    /// <param name="region"></param>
+    /// <param name="url"></param>
+    /// <param name="onConnectClient"></param>
+    /// <param name="onUpdateProfile">プロフィールが更新されたときに呼び出されます。過去に共有されたProfileであっても、onConnectClientで接続を通知された後に呼び出されることが保証されています。</param>
     public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, OnConnectClient onConnectClient, OnUpdateProfile onUpdateProfile)
     {
         this.connection = new RoomConnection(this, roomCode, region, url);
@@ -68,13 +78,20 @@ public class VCRoom : IConnectionContext
         {
             instance = audioManager.Generate(clientId);
             onConnectClient?.Invoke(clientId, instance, asLocalClient);
+            if(pooledProfile.TryGetValue(clientId, out var profile))
+            {
+                onUpdateProfile?.Invoke(clientId, profile.id, profile.name);
+                pooledProfile.Remove(clientId);
+            }
             audioInstances[clientId] = instance;
         }
         return instance;
     }
 
     private bool TryGetAudioInstance(int clientId, out AudioRoutingInstance? instance) => audioInstances.TryGetValue(clientId, out instance);
-    
+
+    AudioRoutingInstanceNode IHasAudioPropertyNode.GetProperty(int propertyId) => (audioManager as IHasAudioPropertyNode).GetProperty(propertyId);
+
     void IConnectionContext.OnAudioFrameReceived(int clientId, float[] samples, int length)
     {
         var instance = GetOrCreateAudioInstance(clientId, false);
@@ -91,9 +108,17 @@ public class VCRoom : IConnectionContext
         }
     }
 
+    Dictionary<int, (string name, byte id)> pooledProfile = [];
     void IConnectionContext.OnClientProfileUpdated(int clientId, string playerName, byte playerId)
     {
-        onUpdateProfile?.Invoke(clientId, playerId, playerName);
+        if (TryGetAudioInstance(clientId, out _))
+        {
+            onUpdateProfile?.Invoke(clientId, playerId, playerName);
+        }
+        else
+        {
+            pooledProfile[clientId] = (playerName, playerId);
+        }
     }
 
     void ISenderContext.OnAudioSent(float[] buffer, int offset, int count)

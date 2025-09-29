@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Interstellar.Routing;
 
-public class AudioManager
+internal class AudioManager : IHasAudioPropertyNode
 {
     AbstractAudioRouter router;
     ISampleProvider? endpoint = null;
@@ -160,4 +160,6 @@ public class AudioManager
         }
         buffers.RemoveAll(b => b.GroupId == clientId);
     }
+
+    AudioRoutingInstanceNode IHasAudioPropertyNode.GetProperty(int propertyId) => globalNodes[propertyId];
 }

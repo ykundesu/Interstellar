@@ -230,6 +230,7 @@ internal class RoomConnection : IMessageProcessor
 
     internal void Disconnect()
     {
+        if(microphone != null) microphone.Close();
         connection?.Close("Client left the game.");
         socket.Close();
     }

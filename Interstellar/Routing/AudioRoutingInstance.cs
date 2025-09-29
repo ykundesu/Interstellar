@@ -11,12 +11,12 @@ using System.Threading.Tasks;
 
 namespace Interstellar.Routing;
 
-public class AudioRoutingInstance
+public class AudioRoutingInstance : IHasAudioPropertyNode
 {
     private List<AudioBuffer> buffers = [];
     private AudioRoutingInstanceNode[] nodes;
     private BufferedSampleProvider sourceProvider;
-    internal AudioRoutingInstanceNode GetProperty(int propertyId) => nodes[propertyId];
+    AudioRoutingInstanceNode IHasAudioPropertyNode.GetProperty(int propertyId) => nodes[propertyId];
 
     
     internal AudioRoutingInstance(List<AudioBuffer> buffers, AudioRoutingInstanceNode[] nodes, BufferedSampleProvider sourceProvider)

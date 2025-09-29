@@ -67,11 +67,21 @@ internal class VCRoom
         } 
     }
 
-    public void Broadcast(int id, uint durationRtpUnits, byte[] encodedAudio)
+    public void Broadcast(byte id, uint durationRtpUnits, byte[] encodedAudio)
     {
         foreach(var client in fastClients.Values)
         {
             if(client.ClientId != id) client.SendAudio(id, durationRtpUnits, encodedAudio);
         }
     }
+
+    public void BroadcastProfile(byte id, string playerName, byte playerId)
+    {
+        foreach (var client in fastClients.Values)
+        {
+            if (client.ClientId != id) client.SendProfile(id, playerName, playerId);
+        }
+    }
+
+    public IEnumerable<VCClient> Clients => fastClients.Values;
 }

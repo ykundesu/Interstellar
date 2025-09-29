@@ -29,6 +29,12 @@ internal class AudioMixer : ISampleProvider
     {
         if (temp == null || temp.Length < count) temp = new float[count];
         bool isFirst = true;
+        if(inputs.Count == 0)
+        {
+            Array.Clear(buffer, offset, count);
+            return count;
+        }
+
         foreach (var input in inputs)
         {
             int read = input.Provider.Read(temp, 0, count);
