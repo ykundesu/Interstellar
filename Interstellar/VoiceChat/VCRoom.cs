@@ -2,7 +2,6 @@
 using Interstellar.Network;
 using Interstellar.Routing;
 using NAudio.Wave;
-using static Interstellar.VoiceChat.VCRoom;
 
 namespace Interstellar.VoiceChat;
 
@@ -13,11 +12,13 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneCont
     private Dictionary<int, AudioRoutingInstance> audioInstances = new();
     private readonly OnConnectClient onConnectClient;
     private readonly OnUpdateProfile onUpdateProfile;
+    private readonly CustomMessageHandler? onCustomMessage;
     private bool loopBack = false;
 
     public delegate void OnConnectClient(int clientId, AudioRoutingInstance routing, bool isLocalClient);
     public delegate void OnUpdateProfile(int clientId, byte playerId, string playerName);
-    
+    public delegate void CustomMessageHandler(byte[] message);
+
     /// <summary>
     /// 
     /// </summary>
@@ -27,12 +28,13 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneCont
     /// <param name="url"></param>
     /// <param name="onConnectClient"></param>
     /// <param name="onUpdateProfile">プロフィールが更新されたときに呼び出されます。過去に共有されたProfileであっても、onConnectClientで接続を通知された後に呼び出されることが保証されています。</param>
-    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, OnConnectClient onConnectClient, OnUpdateProfile onUpdateProfile, int bufferMaxLength = 4096, int bufferLength = 2048)
+    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, OnConnectClient onConnectClient, OnUpdateProfile onUpdateProfile, int bufferMaxLength = 4096, int bufferLength = 2048, CustomMessageHandler? messageHandler = null)
     {
         this.connection = new RoomConnection(this, roomCode, region, url);
         this.audioManager = new AudioManager(audioRouter, bufferLength, bufferMaxLength);
         this.onConnectClient = onConnectClient;
         this.onUpdateProfile = onUpdateProfile;
+        this.onCustomMessage = messageHandler;
     }
 
     public void SetLoopBack(bool enable) => this.loopBack = enable;
@@ -119,6 +121,16 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneCont
             audioManager.Remove(clientId);
             audioInstances.Remove(clientId);
         }
+    }
+
+    void IConnectionContext.OnCustomMessageReceived(byte[] message)
+    {
+        onCustomMessage?.Invoke(message);
+    }
+
+    public void SendCustomMessage(byte[] message)
+    {
+        connection.SendCustomMessage(message);
     }
 
     Dictionary<int, (string name, byte id)> pooledProfile = [];

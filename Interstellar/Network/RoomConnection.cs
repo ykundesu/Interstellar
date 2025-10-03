@@ -33,6 +33,12 @@ internal interface IConnectionContext
     /// <param name="playerName"></param>
     /// <param name="playerId"></param>
     void OnClientProfileUpdated(int clientId, string playerName, byte playerId);
+
+    /// <summary>
+    /// カスタムメッセージを受け取ったときに呼び出されます。
+    /// </summary>
+    /// <param name="message"></param>
+    void OnCustomMessageReceived(byte[] message);
 }
 
 /// <summary>
@@ -167,6 +173,9 @@ internal class RoomConnection : IMessageProcessor
                 var disconnect =NoticeDisconnectMessage.DeserializeWithoutTag(bytes, out read);
                 context.OnClientDisconnected(disconnect.ClientId);
                 break;
+            case MessageTag.Custom:
+                context.OnCustomMessageReceived(bytes.ToArray());
+                break;
         }
         return read;
     }
@@ -213,6 +222,11 @@ internal class RoomConnection : IMessageProcessor
             sdpMLineIndex = (ushort)message.SdpMLineIndex,
             usernameFragment = message.UsernameFragment
         });
+    }
+
+    internal void SendCustomMessage(byte[] message)
+    {
+        socket.SendMessage(new CustomMessage(message));
     }
 
     internal void Disconnect()
