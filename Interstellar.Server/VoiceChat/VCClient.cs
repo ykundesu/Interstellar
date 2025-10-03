@@ -1,12 +1,6 @@
 ﻿using Interstellar.Messages.Variation;
 using Interstellar.Server.Services;
-using SIPSorcery.Net;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Interstellar.Server.VoiceChat;
 
@@ -50,6 +44,11 @@ internal class VCClient
         myRoom.Broadcast(ClientId, durationRtpUnits, encodedAudio);
     }
 
+    public void BroadcastRawMessage(ReadOnlySpan<byte> message)
+    {
+        myRoom.BroadcastRawMessage(ClientId, message.ToArray());
+    }
+
     /// <summary>
     /// このクライアントに音声を送信します。
     /// </summary>
@@ -64,6 +63,11 @@ internal class VCClient
     public void SendProfile(byte id, string playerName, byte playerId)
     {
         this.service.SendMessage(new ShareProfileMessage(id, playerName, playerId));
+    }
+
+    public void Send(byte[] rawMessage)
+    {
+        this.service.SendRawMessage(rawMessage);
     }
 
     public void UpdateProfile(string playerName, byte playerId)

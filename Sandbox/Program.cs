@@ -79,8 +79,8 @@ internal class Program
             _ = UpdatePanAsync();
             
         }, (_,_,_) => { });
-        room.SetMicrophone(new WindowsMicrophone(WaveInDeviceId));
-        room.SetSpeaker(new WindowsSpeaker(WaveOutDeviceName));
+        room.Microphone = new WindowsMicrophone(WaveInDeviceId);
+        room.Speaker = new WindowsSpeaker(WaveOutDeviceName);
 
         Console.ReadKey();
     }

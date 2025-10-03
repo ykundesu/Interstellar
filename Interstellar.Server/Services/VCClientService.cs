@@ -3,11 +3,6 @@ using Interstellar.Messages.Messages;
 using Interstellar.Messages.Variation;
 using Interstellar.Server.VoiceChat;
 using SIPSorcery.Net;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 
@@ -89,6 +84,9 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
                 var profile = ProfileMessage.DeserializeWithoutTag(bytes, out read);
                 Console.WriteLine("Client " + this.ID + " sent profile (name: " + profile.PlayerName + "id: " + profile.PlayerId + ").");
                 client.UpdateProfile(profile.PlayerName, profile.PlayerId);
+                break;
+            case MessageTag.Custom:
+                client?.BroadcastRawMessage(bytes);
                 break;
         }
         return read;
@@ -204,4 +202,6 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
     /// </summary>
     /// <param name="messages"></param>
     public void SendMessages(params IEnumerable<IMessage> messages) => this.Send(MessagePacker.PackMessages(messages).ToArray());
+
+    public void SendRawMessage(byte[] message) => this.Send(message.ToArray());
 }

@@ -75,6 +75,14 @@ internal class VCRoom
         }
     }
 
+    public void BroadcastRawMessage(byte id, byte[] rawMessage)
+    {
+        foreach (var client in fastClients.Values)
+        {
+            if (client.ClientId != id) client.Send(rawMessage);
+        }
+    }
+
     public void BroadcastProfile(byte id, string playerName, byte playerId)
     {
         foreach (var client in fastClients.Values)

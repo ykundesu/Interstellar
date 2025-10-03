@@ -60,20 +60,30 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneCont
     ISampleProvider? ISpeakerContext.GetEndpoint() => audioManager.Endpoint;
 
     IMicrophone? microphone = null;
-    public void SetMicrophone(IMicrophone? micrphone)
+    public IMicrophone? Microphone
     {
-        this.microphone?.Close();
-        micrphone?.Initialize(this);
-        this.microphone = micrphone;
+        get => microphone;
+        set
+        {
+            this.microphone?.Close();
+            value?.Initialize(this);
+            this.microphone = value;
+        }
     }
+    public void SetMicrophone(IMicrophone? microphone) => Microphone = microphone;
 
     ISpeaker? speaker = null;
-    public void SetSpeaker(ISpeaker? speaker)
+    public ISpeaker? Speaker
     {
-        this.speaker?.Close();
-        speaker?.Initialize(this);
-        this.speaker = speaker;
+        get => speaker;
+        set
+        {
+            this.speaker?.Close();
+            value?.Initialize(this);
+            this.speaker = value;
+        }
     }
+    public void SetSpeaker(ISpeaker? speaker) => Speaker = speaker;
 
     private AudioRoutingInstance GetOrCreateAudioInstance(int clientId, bool asLocalClient)
     {
@@ -136,8 +146,8 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneCont
     public void Disconnect()
     {
         connection.Disconnect();
-        SetMicrophone(null);
-        SetSpeaker(null);
+        Microphone = null;
+        Speaker = null;
     }
 
     public int SampleRate => AudioHelpers.ClockRate;
