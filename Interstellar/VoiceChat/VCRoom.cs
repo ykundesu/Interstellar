@@ -50,8 +50,9 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneCont
     /// </summary>
     /// <param name="samples"></param>
     /// <param name="length"></param>
-    void IMicrophoneContext.SendAudio(float[] samples, int samplesLength, double samplesMilliseconds)
+    void IMicrophoneContext.SendAudio(float[] samples, int samplesLength, double samplesMilliseconds, float coeff)
     {
+        for(int i = 0; i < samplesLength; i++) samples[i] *= coeff;
         this.connection.SendAudio(samples, samplesLength, samplesMilliseconds);
         OnAudioSent(samples, samplesLength);
     }

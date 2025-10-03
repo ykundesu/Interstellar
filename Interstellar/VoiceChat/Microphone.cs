@@ -22,12 +22,14 @@ internal interface IMicrophoneContext
     /// <param name="count"></param>
     //void OnAudioSent(float[] buffer, int offset, int count);
 
-    void SendAudio(float[] samples, int samplesLength, double samplesMilliseconds);
+    void SendAudio(float[] samples, int samplesLength, double samplesMilliseconds, float coeff);
 }
 
 public interface IMicrophone
 {
     internal void Initialize(IMicrophoneContext microphoneContext);
+
+    void SetVolume(float volume);
 
     /// <summary>
     /// 録音を終了する際に呼び出されます。
@@ -40,7 +42,10 @@ public class ManualMicrophone : IMicrophone
     IMicrophoneContext? context = null;
     void IMicrophone.Initialize(IMicrophoneContext microphoneContext) => context = microphoneContext;
     void IMicrophone.Close() => context = null;
-    
+
+    private float volume = 1.0f;
+    void IMicrophone.SetVolume(float volume) => this.volume = Math.Clamp(volume, 0.0f, 1.0f);
+
 
     private const int AudioLength1 = (int)(AudioHelpers.ClockRate * 0.020f); //20ms(50FPS)
     private const int AudioLength2 = (int)(AudioHelpers.ClockRate * 0.040f); //40ms(25FPS)
@@ -99,7 +104,7 @@ public class ManualMicrophone : IMicrophone
             return;
         }
 
-        context?.SendAudio(sampleBuffer, buffers, bufferMilliseconds);
+        context?.SendAudio(sampleBuffer, buffers, bufferMilliseconds, volume);
     }
 }
 
@@ -116,6 +121,9 @@ public class WindowsMicrophone : IMicrophone
         waveIn.DataAvailable += SendAudio;
         waveIn.StartRecording();
     }
+
+    private float volume = 1.0f;
+    void IMicrophone.SetVolume(float volume) => this.volume = Math.Clamp(volume, 0.0f, 1.0f);
 
     void IMicrophone.Close()
     {
@@ -150,6 +158,6 @@ public class WindowsMicrophone : IMicrophone
             sampleBuffer[i] = BitConverter.ToInt16(e.Buffer, i * 2) / 32768f;
         }
 
-        context?.SendAudio(sampleBuffer, samples, waveIn.BufferMilliseconds);
+        context?.SendAudio(sampleBuffer, samples, waveIn.BufferMilliseconds, volume);
     }
 }

@@ -1,5 +1,4 @@
 ﻿using Concentus;
-using Interstellar.AudioInput;
 using Interstellar.Messages;
 using Interstellar.Messages.Messages;
 using Interstellar.Messages.Variation;
@@ -80,8 +79,8 @@ internal class Program
             _ = UpdatePanAsync();
             
         }, (_,_,_) => { });
-        room.SetMicrophone(WaveInDeviceId);
-        room.SetSpeaker(WaveOutDeviceName);
+        room.SetMicrophone(new WindowsMicrophone(WaveInDeviceId));
+        room.SetSpeaker(new WindowsSpeaker(WaveOutDeviceName));
 
         Console.ReadKey();
     }
