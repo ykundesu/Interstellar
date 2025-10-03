@@ -18,7 +18,6 @@ internal class AudioManager : IHasAudioPropertyNode
     int nodeLength;
     AudioRoutingInstanceNode[] globalNodes;
     List<AudioBuffer> buffers = [];
-    WasapiOut? waveOut = null;
 
     private class SampleProviderWrapper : ISampleProvider
     {
@@ -39,13 +38,17 @@ internal class AudioManager : IHasAudioPropertyNode
         }
     }
 
-    internal AudioManager(AbstractAudioRouter audioRouter)
+    internal AudioManager(AbstractAudioRouter audioRouter, int bufferLength = 2048, int bufferMaxLength = 4096)
     {
+        this.bufferLength = bufferLength;
+        this.bufferMaxLength = bufferMaxLength;
         this.router = audioRouter;
         nodeLength = FixStructure();
         GenerateGlobalNodes();
         if(endpoint == null) throw new InvalidOperationException("No endpoint found in the audio routing structure.");
     }
+
+    private int bufferLength, bufferMaxLength;
 
     private int FixStructure()
     {
@@ -120,37 +123,13 @@ internal class AudioManager : IHasAudioPropertyNode
             }
             if (!router.IsGlobalRouter) foreach (var c in router.GetChildRouters()) GenerateInner(c, nodes[router.Id]?.Processor);
         }
-        BufferedSampleProvider sourceProvider = new(WaveFormat.CreateIeeeFloatWaveFormat(AudioHelpers.ClockRate, 1), 4096) { DiscardOnBufferOverflow = true, BufferCutSize = 4096, BufferCutToSize = 2048 };
+        BufferedSampleProvider sourceProvider = new(WaveFormat.CreateIeeeFloatWaveFormat(AudioHelpers.ClockRate, 1), bufferMaxLength) { DiscardOnBufferOverflow = true, BufferCutSize = bufferMaxLength, BufferCutToSize = bufferLength };
         GenerateInner(router, sourceProvider);
         return new(this.buffers, nodes, sourceProvider);
     }
-    
-    internal void Start(string? outputDeviceName)
-    {
-        if(endpoint == null) throw new InvalidOperationException("No endpoint found in the audio routing structure.");
-        if (this.waveOut != null)
-        {
-            this.waveOut.Stop();
-            this.waveOut.Dispose();
-        }
 
-        var deviceEnumerator = new MMDeviceEnumerator();
-        var device = deviceEnumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).FirstOrDefault(device => device.FriendlyName == outputDeviceName);
-        device ??= deviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-        this.waveOut = new WasapiOut(device, AudioClientShareMode.Shared, false, 50);
-        this.waveOut.Init(endpoint);
-        this.waveOut.Play();
-    }
+    public ISampleProvider? Endpoint => endpoint;
 
-    public void Stop()
-    {
-        if (this.waveOut != null)
-        {
-            this.waveOut.Stop();
-            this.waveOut.Dispose();
-            this.waveOut = null;
-        }
-    }
 
     public void Remove(int clientId)
     {

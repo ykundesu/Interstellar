@@ -1,11 +1,12 @@
-﻿using Interstellar.Network;
+﻿using Interstellar.Messages;
+using Interstellar.Network;
 using Interstellar.Routing;
 using NAudio.Wave;
 using static Interstellar.VoiceChat.VCRoom;
 
 namespace Interstellar.VoiceChat;
 
-public class VCRoom : IConnectionContext, IHasAudioPropertyNode
+public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneContext, ISpeakerContext
 {
     private RoomConnection connection;
     private AudioManager audioManager;
@@ -26,10 +27,10 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode
     /// <param name="url"></param>
     /// <param name="onConnectClient"></param>
     /// <param name="onUpdateProfile">プロフィールが更新されたときに呼び出されます。過去に共有されたProfileであっても、onConnectClientで接続を通知された後に呼び出されることが保証されています。</param>
-    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, OnConnectClient onConnectClient, OnUpdateProfile onUpdateProfile)
+    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, OnConnectClient onConnectClient, OnUpdateProfile onUpdateProfile, int bufferMaxLength = 4096, int bufferLength = 2048)
     {
         this.connection = new RoomConnection(this, roomCode, region, url);
-        this.audioManager = new AudioManager(audioRouter);
+        this.audioManager = new AudioManager(audioRouter, bufferLength, bufferMaxLength);
         this.onConnectClient = onConnectClient;
         this.onUpdateProfile = onUpdateProfile;
     }
@@ -45,32 +46,33 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode
     public void UpdateProfile(string playerName, byte playerId) => this.connection.UpdateProfile(playerName, playerId);
 
     /// <summary>
-    /// 使用するマイクをデバイスIDで指定します。
-    /// このメソッドを呼び出すまで音声は送信されません。
+    /// 音声を送信します。
     /// </summary>
-    public bool SetMicrophone(string deviceName)
+    /// <param name="samples"></param>
+    /// <param name="length"></param>
+    void IMicrophoneContext.SendAudio(float[] samples, int samplesLength, double samplesMilliseconds)
     {
-        var count = WaveInEvent.DeviceCount;
-        for (int i = 0; i < count; i++)
-        {
-            if(WaveInEvent.GetCapabilities(i).ProductName == deviceName)
-            {
-                SetMicrophone(i);
-                return true;
-            }
-        }
-        return false;
+        this.connection.SendAudio(samples, samplesLength, samplesMilliseconds);
+        OnAudioSent(samples, samplesLength);
     }
 
-    private void SetMicrophone(int deviceId) => this.connection.SetMicrophone(deviceId);
+    ISampleProvider? ISpeakerContext.GetEndpoint() => audioManager.Endpoint;
 
+    IMicrophone? microphone = null;
+    public void SetMicrophone(IMicrophone? micrphone)
+    {
+        this.microphone?.Close();
+        micrphone?.Initialize(this);
+        this.microphone = micrphone;
+    }
 
-
-    /// <summary>
-    /// 音声の再生を開始します。
-    /// </summary>
-    /// <param name="deviceName"></param>
-    public void SetSpeaker(string deviceName) => this.audioManager.Start(deviceName);
+    ISpeaker? speaker = null;
+    public void SetSpeaker(ISpeaker? speaker)
+    {
+        this.speaker?.Close();
+        speaker?.Initialize(this);
+        this.speaker = speaker;
+    }
 
     private AudioRoutingInstance GetOrCreateAudioInstance(int clientId, bool asLocalClient)
     {
@@ -121,18 +123,21 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode
         }
     }
 
-    void ISenderContext.OnAudioSent(float[] buffer, int offset, int count)
+    void OnAudioSent(float[] buffer, int count)
     {
         if (loopBack && connection.MyClientId != -1)
         {
             var instance = GetOrCreateAudioInstance(connection.MyClientId, true);
-            instance.AddSamples(buffer, offset, count);
+            instance.AddSamples(buffer, 0, count);
         }
     }
 
     public void Disconnect()
     {
         connection.Disconnect();
-        audioManager.Stop();
+        SetMicrophone(null);
+        SetSpeaker(null);
     }
+
+    public int SampleRate => AudioHelpers.ClockRate;
 }

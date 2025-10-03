@@ -1,25 +1,16 @@
 ﻿using Concentus;
-using Interstellar.AudioInput;
 using Interstellar.Messages;
 using Interstellar.Messages.Messages;
 using Interstellar.Messages.Variation;
+using NAudio.Wave;
 using SIPSorcery.Net;
+using System;
+using System.Text;
 using WebSocketSharp;
 
 namespace Interstellar.Network;
 
-internal interface ISenderContext
-{
-    /// <summary>
-    /// オーディオデータを送信する際に呼び出されます。
-    /// </summary>
-    /// <param name="buffer"></param>
-    /// <param name="offset"></param>
-    /// <param name="count"></param>
-    void OnAudioSent(float[] buffer, int offset, int count);
-}
-
-internal interface IConnectionContext : ISenderContext
+internal interface IConnectionContext
 {
     /// <summary>
     /// 音声フレームを受け取ったときに呼び出されます。
@@ -53,7 +44,6 @@ internal class RoomConnection : IMessageProcessor
     private readonly string region;
     private readonly WebSocket socket;
     private RTCPeerConnection? connection = null;
-    private MicrophoneAudioSource? microphone;
     private ProfileMessage? profileMessage = null;
     private int? myClientId = null;
 
@@ -142,16 +132,15 @@ internal class RoomConnection : IMessageProcessor
         };
     }
 
-    public void SetMicrophone(int deviceId)
+    private IOpusEncoder encoder = AudioHelpers.GetOpusEncoder();
+    byte[] encodedBuffer = new byte[8192];
+    public void SendAudio(float[] sampleBuffer, int sampleLength, double bufferMilliseconds)
     {
-        if (this.microphone != null) this.microphone.Close();
-        this.microphone = new MicrophoneAudioSource(deviceId, context);
-        ReflectIdToMicrophone();
-    }
+        if(localAudioStream == null) return;
 
-    private void ReflectIdToMicrophone()
-    {
-        if(localAudioStream != null) this.microphone?.BindToConnection(localAudioStream);
+        var durationRtpUnits = bufferMilliseconds.ToRtpUnits(AudioHelpers.ClockRate);
+        int encodedLength = encoder.Encode(sampleBuffer, sampleLength, encodedBuffer, encodedBuffer.Length);
+        localAudioStream?.SendAudio(durationRtpUnits, new ArraySegment<byte>(encodedBuffer, 0, encodedLength));
     }
 
     MediaStreamTrack[] lastTracks = [];
@@ -189,8 +178,6 @@ internal class RoomConnection : IMessageProcessor
         var localTrack = new MediaStreamTrack(AudioHelpers.GetOpusFormat(id), MediaStreamStatusEnum.SendOnly);
         connection!.addTrack(localTrack);
         localAudioStream = connection.AudioStreamList.Find(a => a.GetSendingFormat().ID == id);
-        
-        ReflectIdToMicrophone();
     }
 
     private void OnReceiveSdpOffer(SdpOfferMessage message)
@@ -230,7 +217,6 @@ internal class RoomConnection : IMessageProcessor
 
     internal void Disconnect()
     {
-        if(microphone != null) microphone.Close();
         connection?.Close("Client left the game.");
         socket.Close();
     }
