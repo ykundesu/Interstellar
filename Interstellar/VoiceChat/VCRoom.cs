@@ -5,18 +5,37 @@ using NAudio.Wave;
 
 namespace Interstellar.VoiceChat;
 
+public class VCRoomParameters
+{
+    public VCRoom.OnConnectClient? OnConnectClient;
+    public VCRoom.OnUpdateProfile? OnUpdateProfile;
+    public VCRoom.CustomMessageHandler? MessageHandler;
+    public VCRoom.OnDisconnect? OnDisconnect;
+    public int BufferMaxLength = 4096;
+    public int BufferLength = 2048;
+
+    public VCRoomParameters SetBufferLength(int length, int additional = 2048)
+    {
+        BufferLength = length;
+        BufferMaxLength = length + additional;
+        return this;
+    }
+}
+
 public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneContext, ISpeakerContext
 {
     private RoomConnection connection;
     private AudioManager audioManager;
     private Dictionary<int, AudioRoutingInstance> audioInstances = new();
-    private readonly OnConnectClient onConnectClient;
-    private readonly OnUpdateProfile onUpdateProfile;
+    private readonly OnConnectClient? onConnectClient;
+    private readonly OnUpdateProfile? onUpdateProfile;
     private readonly CustomMessageHandler? onCustomMessage;
+    private readonly OnDisconnect? onDisconnect;
     private bool loopBack = false;
 
     public delegate void OnConnectClient(int clientId, AudioRoutingInstance routing, bool isLocalClient);
     public delegate void OnUpdateProfile(int clientId, byte playerId, string playerName);
+    public delegate void OnDisconnect(int clientId);
     public delegate void CustomMessageHandler(byte[] message);
 
     /// <summary>
@@ -28,13 +47,15 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneCont
     /// <param name="url"></param>
     /// <param name="onConnectClient"></param>
     /// <param name="onUpdateProfile">プロフィールが更新されたときに呼び出されます。過去に共有されたProfileであっても、onConnectClientで接続を通知された後に呼び出されることが保証されています。</param>
-    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, OnConnectClient onConnectClient, OnUpdateProfile onUpdateProfile, int bufferMaxLength = 4096, int bufferLength = 2048, CustomMessageHandler? messageHandler = null)
+    public VCRoom(AbstractAudioRouter audioRouter, string roomCode, string region, string url, VCRoomParameters? additionalParameters)
     {
+        this.onConnectClient = additionalParameters?.OnConnectClient;
+        this.onUpdateProfile = additionalParameters?.OnUpdateProfile;
+        this.onCustomMessage = additionalParameters?.MessageHandler;
+        this.onDisconnect = additionalParameters?.OnDisconnect;
+
         this.connection = new RoomConnection(this, roomCode, region, url);
-        this.audioManager = new AudioManager(audioRouter, bufferLength, bufferMaxLength);
-        this.onConnectClient = onConnectClient;
-        this.onUpdateProfile = onUpdateProfile;
-        this.onCustomMessage = messageHandler;
+        this.audioManager = new AudioManager(audioRouter, additionalParameters?.BufferLength ?? 2048, additionalParameters?.BufferMaxLength ?? 4096);
     }
 
     public void SetLoopBack(bool enable) => this.loopBack = enable;
@@ -117,9 +138,9 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneCont
     {
         if(TryGetAudioInstance(clientId, out var instance))
         {
-            //instance.
             audioManager.Remove(clientId);
             audioInstances.Remove(clientId);
+            onDisconnect?.Invoke(clientId);
         }
     }
 
