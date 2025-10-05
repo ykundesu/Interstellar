@@ -121,7 +121,12 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
                 client.UpdateProfile(profile.PlayerName, profile.PlayerId);
                 break;
             case MessageTag.Custom:
+                CustomMessage.DeserializeForServerWithoutTag(bytes, out read);
                 client?.BroadcastRawMessage(bytes);
+                break;
+            case MessageTag.RequestReload:
+                read = 0;
+                ResendConnectionInformation();
                 break;
         }
         return read;
@@ -158,6 +163,12 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
             sdpMLineIndex = (ushort)message.SdpMLineIndex,
             usernameFragment = message.UsernameFragment
         });
+    }
+
+    private void ResendConnectionInformation()
+    {
+        if(client == null) return;
+        SendMessages([UpdateTracks(client.Room.CurrentVoiceMask), ..client.ShareExistingProfiles()]);
     }
 
     private SdpOfferMessage UpdateTracks(long mask)

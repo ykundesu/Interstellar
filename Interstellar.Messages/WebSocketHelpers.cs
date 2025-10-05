@@ -10,6 +10,12 @@ namespace Interstellar.Messages;
 
 static public class WebSocketHelpers
 {
+    static public void SendMessage(this WebSocket webSocket, MessageTag tag)
+    {
+        byte[] bytes = [1, (byte)tag ];
+        webSocket.Send(bytes);
+    }
+
     static public void SendMessage(this WebSocket webSocket, IMessage message)
     {
         var bytes = MessagePacker.PackMessage(message);

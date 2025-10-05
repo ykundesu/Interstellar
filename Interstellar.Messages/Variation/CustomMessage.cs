@@ -23,5 +23,12 @@ public class CustomMessage : IMessage
         length += IMessage.SerializeBytes(ref bytes, Data);
         return length;
     }
+
+    static public void DeserializeForServerWithoutTag(ReadOnlySpan<byte> bytes, out int read)
+    {
+        read = 0;
+        read += IMessage.DeserializeInt32(ref bytes, out var length);
+        return read + length;
+    }
 }
 

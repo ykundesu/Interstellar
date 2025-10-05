@@ -12,6 +12,8 @@ internal class VCClient
     VCRoom myRoom;
     Profile? profile = null;
 
+    public VCRoom Room => myRoom;
+
     public byte ClientId { get; }
 
     public VCClient(VCClientService service, byte clientId, VCRoom room)

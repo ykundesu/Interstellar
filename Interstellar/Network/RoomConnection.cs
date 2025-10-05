@@ -229,6 +229,10 @@ internal class RoomConnection : IMessageProcessor
         socket.SendMessage(new CustomMessage(message));
     }
 
+    internal void SendZeroSizeMessage(MessageTag tag)
+    {
+        socket.SendMessage(tag);
+    }
     internal void Disconnect()
     {
         connection?.Close("Client left the game.");
