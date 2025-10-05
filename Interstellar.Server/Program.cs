@@ -4,7 +4,7 @@
     {
         static void Main(string[] args)
         {
-            string urlPrefix = "ws://";
+            string urlPrefix = "http://";
             if(args.Length > 1)
             {
                 for(int i = 1; i < args.Length; i++)
@@ -12,7 +12,7 @@
                     switch(args[i])
                     {
                         case "-secure":
-                            urlPrefix = "wss://";
+                            urlPrefix = "https://";
                             break;
                     }
                 }
