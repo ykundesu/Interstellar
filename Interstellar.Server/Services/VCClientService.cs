@@ -15,6 +15,8 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
     private Dictionary<int, AudioStream> audioStreams = new(32);
     private VCClient? client = null;
     private bool IsJoined => client != null;
+    private readonly List<IceCandMessage> pendingIceCandidates = new();
+    private readonly object iceCandidatesLock = new();
 
     public VCClientService()
     {
@@ -28,13 +30,42 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
         connection.onicecandidate += (candidate) =>
         {
             Console.WriteLine("Client " + this.ID + " ICE candidate generated.");
-            this.Send(MessagePacker.PackMessage(new IceCandMessage(candidate.candidate, candidate.sdpMid, candidate.sdpMLineIndex, candidate.usernameFragment)).ToArray());
+            var msg = new IceCandMessage(candidate.candidate, candidate.sdpMid, candidate.sdpMLineIndex, candidate.usernameFragment);
+            // まだ開いていない場合があるので開いているかを確認
+            if (this.Context?.WebSocket?.ReadyState == WebSocketState.Open)
+            {
+                SendMessage(msg);
+            }
+            else
+            {
+                lock (iceCandidatesLock)
+                {
+                    pendingIceCandidates.Add(msg);
+                }
+            }
         };
     }
 
     protected override void OnOpen()
     {
         Console.WriteLine("Client " + this.ID + " connected.");
+        // WebSocketが開く前に送信しようとしたICE候補を送信
+        List<IceCandMessage>? toSend = null;
+        lock (iceCandidatesLock)
+        {
+            if (pendingIceCandidates.Count > 0)
+            {
+                toSend = new List<IceCandMessage>(pendingIceCandidates);
+                pendingIceCandidates.Clear();
+            }
+        }
+        if (toSend != null)
+        {
+            foreach (var ic in toSend)
+            {
+                SendMessage(ic);
+            }
+        }
     }
 
     protected override void OnMessage(MessageEventArgs e)
@@ -56,6 +87,10 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
     {
         Console.WriteLine("Client " + this.ID + " disconnected.");
         client?.Close();
+        lock (iceCandidatesLock)
+        {
+            pendingIceCandidates.Clear();
+        }
     }
 
     int IMessageProcessor.Process(MessageTag tag, ReadOnlySpan<byte> bytes)
