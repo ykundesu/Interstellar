@@ -121,7 +121,7 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
                 client.UpdateProfile(profile.PlayerName, profile.PlayerId);
                 break;
             case MessageTag.Custom:
-                CustomMessage.DeserializeForServerWithoutTag(bytes, out read);
+                read = CustomMessage.DeserializeForServerWithoutTag(bytes, out read);
                 client?.BroadcastRawMessage(bytes);
                 break;
             case MessageTag.RequestReload:
