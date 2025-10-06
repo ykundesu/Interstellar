@@ -72,6 +72,12 @@ internal class RoomConnection : IMessageProcessor
         Connect();
     }
 
+    public void UpdateMuteStatus(bool mute)
+    {
+        var message = new UpdateMuteStatusMessage(mute);
+        socket.SendMessage(message);
+    }
+
     /// <summary>
     /// ゲーム内のプレイヤー情報を更新します。
     /// </summary>

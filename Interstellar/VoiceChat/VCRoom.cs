@@ -76,7 +76,10 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneCont
     void IMicrophoneContext.SendAudio(float[] samples, int samplesLength, double samplesMilliseconds, float coeff)
     {
         for(int i = 0; i < samplesLength; i++) samples[i] *= coeff;
-        this.connection.SendAudio(samples, samplesLength, samplesMilliseconds);
+        if (!Mute)
+        {
+            this.connection.SendAudio(samples, samplesLength, samplesMilliseconds);
+        }
         OnAudioSent(samples, samplesLength);
     }
 
@@ -179,6 +182,15 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneCont
             var instance = GetOrCreateAudioInstance(connection.MyClientId, true);
             instance.AddSamples(buffer, 0, count);
         }
+    }
+
+    private bool mute = false;
+    public bool Mute => mute;
+    public void SetMute(bool mute)
+    {
+        if (this.mute == mute) return;
+        this.mute = mute;
+        connection.UpdateMuteStatus(mute);
     }
 
     public void Disconnect()
