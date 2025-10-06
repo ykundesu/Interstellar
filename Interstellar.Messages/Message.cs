@@ -79,6 +79,17 @@ public interface IMessage
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static protected int SerializeBoolean(ref Span<byte> bytes, bool value) => SerializeByte(ref bytes, (byte)(value ? 1 : 0));
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static protected int DeserializeBoolean(ref ReadOnlySpan<byte> bytes, out bool value)
+    {
+        var length = DeserializeByte(ref bytes, out var byteValue);
+        value = byteValue != 0;
+        return length;
+    }
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static protected int SerializeByte(ref Span<byte> bytes, byte value)
     {
         bytes[0] = value;

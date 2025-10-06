@@ -1,4 +1,6 @@
-﻿using Interstellar.Server.Services;
+﻿using Interstellar.Messages;
+using Interstellar.Messages.Variation;
+using Interstellar.Server.Services;
 using SIPSorcery.Net;
 using System;
 using System.Collections.Generic;
@@ -83,11 +85,11 @@ internal class VCRoom
         }
     }
 
-    public void BroadcastProfile(byte id, string playerName, byte playerId)
+    public void Broadcast(byte sender, IMessage message)
     {
         foreach (var client in fastClients.Values)
         {
-            if (client.ClientId != id) client.SendProfile(id, playerName, playerId);
+            if (client.ClientId != sender) client.Send(message);
         }
     }
 

@@ -18,4 +18,6 @@ public enum MessageTag
     NoticeDisconnect = 7,
     Custom = 8,
     RequestReload = 9,
+    UpdateMuteStatus = 10,
+    ShareMuteStatus = 11,
 }

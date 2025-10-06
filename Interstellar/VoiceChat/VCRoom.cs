@@ -154,6 +154,11 @@ public class VCRoom : IConnectionContext, IHasAudioPropertyNode, IMicrophoneCont
         connection.SendCustomMessage(message);
     }
 
+    public void Rejoin()
+    {
+        connection.SendZeroSizeMessage(MessageTag.RequestReload);
+    }
+
     Dictionary<int, (string name, byte id)> pooledProfile = [];
     void IConnectionContext.OnClientProfileUpdated(int clientId, string playerName, byte playerId)
     {

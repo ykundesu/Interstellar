@@ -1,4 +1,5 @@
-﻿using Interstellar.Messages.Variation;
+﻿using Interstellar.Messages;
+using Interstellar.Messages.Variation;
 using Interstellar.Server.Services;
 using System.Diagnostics.CodeAnalysis;
 
@@ -11,6 +12,7 @@ internal class VCClient
     VCClientService service;
     VCRoom myRoom;
     Profile? profile = null;
+    public bool IsMute { get; private set; } = false;
 
     public VCRoom Room => myRoom;
 
@@ -21,6 +23,13 @@ internal class VCClient
         this.service = service;
         this.ClientId = clientId;
         this.myRoom = room;
+    }
+
+    public void UpdateMuteStatus(bool isMute)
+    {
+        if(this.IsMute == isMute) return;
+        this.IsMute = isMute;
+        myRoom.Broadcast(ClientId, new ShareMuteStatusMessage(ClientId, isMute));
     }
 
     /// <summary>
@@ -62,20 +71,17 @@ internal class VCClient
         this.service.SendAudio(id, durationRtpUnits, encodedAudio);
     }
 
-    public void SendProfile(byte id, string playerName, byte playerId)
-    {
-        this.service.SendMessage(new ShareProfileMessage(id, playerName, playerId));
-    }
-
     public void Send(byte[] rawMessage)
     {
         this.service.SendRawMessage(rawMessage);
     }
 
+    public void Send(IMessage message) => this.service.SendMessage(message);
+
     public void UpdateProfile(string playerName, byte playerId)
     {
         this.profile = new Profile(playerName, playerId);
-        myRoom.BroadcastProfile(ClientId, playerName, playerId);
+        myRoom.Broadcast(ClientId, new ShareProfileMessage(ClientId, playerName, playerId));
     }
 
     public bool TryGetProfile([MaybeNullWhen(false)]out string playerName, out byte playerId)

@@ -3,6 +3,7 @@ using Interstellar.Messages.Messages;
 using Interstellar.Messages.Variation;
 using Interstellar.Server.VoiceChat;
 using SIPSorcery.Net;
+using System.Collections.Concurrent;
 using WebSocketSharp;
 using WebSocketSharp.Server;
 
@@ -15,8 +16,7 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
     private Dictionary<int, AudioStream> audioStreams = new(32);
     private VCClient? client = null;
     private bool IsJoined => client != null;
-    private readonly List<IceCandMessage> pendingIceCandidates = new();
-    private readonly object iceCandidatesLock = new();
+    private readonly ConcurrentQueue<IceCandMessage> pendingIceCandidates = new();
 
     public VCClientService()
     {
@@ -38,10 +38,7 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
             }
             else
             {
-                lock (iceCandidatesLock)
-                {
-                    pendingIceCandidates.Add(msg);
-                }
+                pendingIceCandidates.Enqueue(msg);
             }
         };
     }
@@ -50,21 +47,9 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
     {
         Console.WriteLine("Client " + this.ID + " connected.");
         // WebSocketが開く前に送信しようとしたICE候補を送信
-        List<IceCandMessage>? toSend = null;
-        lock (iceCandidatesLock)
+        while (pendingIceCandidates.TryDequeue(out var msg))
         {
-            if (pendingIceCandidates.Count > 0)
-            {
-                toSend = new List<IceCandMessage>(pendingIceCandidates);
-                pendingIceCandidates.Clear();
-            }
-        }
-        if (toSend != null)
-        {
-            foreach (var ic in toSend)
-            {
-                SendMessage(ic);
-            }
+            SendMessage(msg);
         }
     }
 
@@ -87,10 +72,7 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
     {
         Console.WriteLine("Client " + this.ID + " disconnected.");
         client?.Close();
-        lock (iceCandidatesLock)
-        {
-            pendingIceCandidates.Clear();
-        }
+        pendingIceCandidates.Clear();
     }
 
     int IMessageProcessor.Process(MessageTag tag, ReadOnlySpan<byte> bytes)
@@ -121,12 +103,16 @@ internal class VCClientService : WebSocketBehavior, IMessageProcessor
                 client.UpdateProfile(profile.PlayerName, profile.PlayerId);
                 break;
             case MessageTag.Custom:
-                read = CustomMessage.DeserializeForServerWithoutTag(bytes, out read);
+                CustomMessage.DeserializeForServerWithoutTag(bytes, out read);
                 client?.BroadcastRawMessage(bytes);
                 break;
             case MessageTag.RequestReload:
                 read = 0;
                 ResendConnectionInformation();
+                break;
+            case MessageTag.UpdateMuteStatus:
+                var muteStatus = UpdateMuteStatusMessage.DeserializeWithoutTag(bytes, out read);
+                client?.UpdateMuteStatus(muteStatus.Mute);
                 break;
         }
         return read;
